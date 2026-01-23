@@ -205,3 +205,9 @@ object SequenceRow:
 
     object ExecutedStep:
       given [D]: Eq[ExecutedStep[D]] = Eq.derived
+
+  given [D: Eq]: Eq[SequenceRow[D]] = Eq.instance:
+    case (a: FutureStep[D], b: FutureStep[D])                         => a === b
+    case (a: Executed.ExecutedVisit[D], b: Executed.ExecutedVisit[D]) => a === b
+    case (a: Executed.ExecutedStep[D], b: Executed.ExecutedStep[D])   => a === b
+    case _                                                            => false

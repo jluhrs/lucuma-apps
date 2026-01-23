@@ -4,7 +4,9 @@
 package explore.config.sequence
 
 import cats.Eq
+import cats.derived.*
 import cats.syntax.all.*
+import crystal.react.hooks.*
 import explore.components.ui.ExploreStyles
 import explore.model.AppContext
 import explore.model.reusability.given
@@ -24,6 +26,8 @@ import lucuma.ui.table.ColumnSize.*
 import lucuma.ui.table.hooks.*
 
 import scala.scalajs.LinkingInfo
+import monocle.Lens
+import monocle.Focus
 
 private type SequenceColumnsType[D] =
   SequenceColumns[D, SequenceIndexedRow[D], SequenceRow[D], Nothing, Nothing, Nothing]
@@ -33,7 +37,9 @@ private type ColumnType[D]          =
 private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends SequenceRowBuilder[D]:
   private type Props = SequenceTable[S, D]
 
-  private lazy val ColDef = ColumnDef[SequenceTableRowType]
+  private case class TableMeta(isEditing: IsEditing = IsEditing.False) extends SequenceTableMeta
+
+  private lazy val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta]
 
   private val HeaderColumnId: ColumnId   = ColumnId("header")
   private val ExtraRowColumnId: ColumnId = ColumnId("extraRow")
@@ -69,27 +75,53 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
     )
   )
 
+  // TODO These should actually just be SequenceRow.FutureStep
+  private case class SequenceRows(acquisition: List[SequenceRow[D]], science: List[SequenceRow[D]])
+      derives Eq
+  private object SequenceRows:
+    given Reusability[SequenceRows] = Reusability.byEq
+
+  // We maintain two copies of the rows. When in View mode, they both contain the same set of rows.
+  // When in Edit mode, the `view` copy continues to be updated with external changes,
+  // while the `edit` copy remains static to preserve the user's edits.
+  private case class SequenceCopies(view: SequenceRows, edit: SequenceRows)
+  private object SequenceCopies:
+    val view: Lens[SequenceCopies, SequenceRows] = Focus[SequenceCopies](_.view)
+    val edit: Lens[SequenceCopies, SequenceRows] = Focus[SequenceCopies](_.edit)
+
   protected[sequence] val component =
     ScalaFnComponent[Props]: props =>
       for
-        ctx        <- useContext(AppContext.ctx)
-        visitsData <- useMemo(props.visits):
-                        visitsSequences(_, none)
-        rows       <-
+        ctx            <- useContext(AppContext.ctx)
+        visitsData     <- useMemo(props.visits):
+                            visitsSequences(_, none)
+        sequenceCopies <- useStateView:
+                            SequenceCopies(
+                              view = SequenceRows(props.acquisitionRows, props.scienceRows),
+                              edit = SequenceRows(props.acquisitionRows, props.scienceRows)
+                            )
+        // Update our copy of the sequence when it changes externally.
+        _              <- useEffectWithDeps(props.acquisitionRows, props.scienceRows): (acquisiton, science) =>
+                            sequenceCopies.mod:
+                              val newRows: SequenceRows = SequenceRows(acquisiton, science)
+                              SequenceCopies.view.replace(newRows) >>>
+                                (if props.isEditing then SequenceCopies.edit.replace(newRows) else identity)
+        effectiveRows   = if props.isEditing then sequenceCopies.get.edit else sequenceCopies.get.view
+        rows           <-
           useMemo(
-            (visitsData, props.acquisitionRows, props.scienceRows, props.currentVisitId)
-          ): (visitsData, acquisitionRows, scienceRows, currentVisitId) =>
+            (visitsData, effectiveRows, props.currentVisitId)
+          ): (visitsData, rows, currentVisitId) =>
             val (visitRows, nextScienceIndex): (List[VisitData], StepIndex) = visitsData.value
             stitchSequence(
               visitRows,
               currentVisitId,
               nextScienceIndex,
-              acquisitionRows,
-              scienceRows
+              rows.acquisition,
+              rows.science
             )
-        resize     <- useResizeDetector
-        dynTable   <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
-        table      <-
+        resize         <- useResizeDetector
+        dynTable       <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
+        table          <-
           useReactTable:
             TableOptions(
               columns.map(dynTable.setInitialColWidths),
@@ -107,7 +139,8 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                 columnSizing = dynTable.columnSizing,
                 columnVisibility = dynTable.columnVisibility
               ),
-              onColumnSizingChange = dynTable.onColumnSizingChangeHandler
+              onColumnSizingChange = dynTable.onColumnSizingChangeHandler,
+              meta = TableMeta(props.isEditing)
             )
       yield
         val extraRowMod: TagMod =

@@ -12,6 +12,7 @@ import lucuma.core.math.SignalToNoise
 import lucuma.core.math.Wavelength
 import lucuma.core.util.TimeSpan
 import lucuma.react.common.*
+import lucuma.react.primereact.InputNumber
 import lucuma.react.syntax.*
 import lucuma.react.table.*
 import lucuma.ui.format.formatSN
@@ -26,7 +27,7 @@ import SequenceRowFormatters.*
 // `TM` is the type of the table meta.
 // `CM` is the type of the column meta.
 // `TF` is the type of the global filter.
-class SequenceColumns[D, T, R <: SequenceRow[D], TM, CM, TF](
+class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta, CM, TF](
   colDef:   ColumnDef.Applied[Expandable[HeaderOrRow[T]], TM, CM, TF],
   getStep:  T => Option[R],
   getIndex: T => Option[StepIndex]
@@ -51,8 +52,12 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM, CM, TF](
       _.value.toOption.flatMap(row => getStep(row).flatMap(_.exposureTime)),
       header = _ => "Exp (sec)",
       cell = c =>
-        (c.value, c.row.original.value.toOption.flatMap(getStep).flatMap(_.instrument)).mapN:
-          (e, i) => FormatExposureTime(i)(e).value
+        val isEditing: Boolean = c.table.options.meta.exists(_.isEditing.value)
+        (c.value, c.row.original.value.toOption.flatMap(getStep).flatMap(_.instrument))
+          .mapN[VdomNode]: (e, i) =>
+            if isEditing then
+              InputNumber(id = s"exposure-${c.row.index}", value = e.toSeconds.toDouble)
+            else FormatExposureTime(i)(e).value
     )
 
   private lazy val guideStateCol: colDef.TypeFor[Option[Boolean]] =

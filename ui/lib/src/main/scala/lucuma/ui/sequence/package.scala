@@ -13,6 +13,7 @@ import lucuma.core.model.sequence.Step
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.flamingos2.Flamingos2FpuMask
 import lucuma.core.model.sequence.gmos
+import lucuma.core.util.NewBoolean
 import lucuma.core.util.NewType
 import lucuma.react.SizePx
 import lucuma.react.common.*
@@ -33,6 +34,9 @@ object SequenceRowHeight:
 object StepIndex extends NewType[PosInt]:
   val One: StepIndex = StepIndex(PosInt.unsafeFrom(1))
 type StepIndex = StepIndex.Type
+
+object IsEditing extends NewBoolean
+type IsEditing = IsEditing.Type
 
 private def renderStepType(icon: VdomNode, tooltip: String): VdomNode =
   <.span(icon).withTooltip(content = tooltip, showDelay = 100, position = Tooltip.Position.Bottom)

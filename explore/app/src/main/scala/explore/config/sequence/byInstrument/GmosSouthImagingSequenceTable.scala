@@ -11,12 +11,14 @@ import lucuma.itc.SignalToNoiseAt
 import lucuma.react.common.ReactFnProps
 import lucuma.schemas.ObservationDB.Enums.GmosSouthFilter
 import lucuma.schemas.model.Visit
+import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.byInstrument.ImagingSequenceTable
 
 final case class GmosSouthImagingSequenceTable(
   visits:      List[Visit.GmosSouth],
   config:      ExecutionConfig.GmosSouth,
-  snPerFilter: Map[GmosSouthFilter, SignalToNoiseAt]
+  snPerFilter: Map[GmosSouthFilter, SignalToNoiseAt],
+  isEditing:   IsEditing = IsEditing.False
 ) extends ReactFnProps(GmosSouthImagingSequenceTable.component)
     with SequenceTable[gmos.StaticConfig.GmosSouth, gmos.DynamicConfig.GmosSouth]
     with ImagingSequenceTable[gmos.DynamicConfig.GmosSouth, GmosSouthFilter]:

@@ -27,10 +27,12 @@ import lucuma.core.model.sequence.InstrumentExecutionConfig
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import lucuma.react.primereact.Message
+import lucuma.react.primereact.ToggleButton
 import lucuma.refined.*
 import lucuma.schemas.model.ExecutionVisits
 import lucuma.schemas.model.ModeSignalToNoise
 import lucuma.schemas.model.Visit
+import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.SequenceData
 import lucuma.ui.syntax.all.*
 import lucuma.ui.syntax.all.given
@@ -43,7 +45,8 @@ final case class SequenceTile(
   asterismIds:         SortedSet[Target.Id],
   customSedTimestamps: List[Timestamp],
   calibrationRole:     Option[CalibrationRole],
-  sequenceChanged:     View[Pot[Unit]]
+  sequenceChanged:     View[Pot[Unit]],
+  isEditing:           View[IsEditing]
 ) extends Tile[SequenceTile](ObsTabTileIds.SequenceId.id, "Sequence")(SequenceTile)
 
 object SequenceTile
@@ -85,7 +88,15 @@ object SequenceTile
                   HelpIcon("target/main/sequence-times.md".refined),
                   planned,
                   executed,
-                  pending
+                  pending,
+                  ToggleButton(
+                    checked = props.isEditing.get,
+                    onChange = value => props.isEditing.set(IsEditing(value)),
+                    onIcon = Icons.Pencil,
+                    offIcon = Icons.Pencil,
+                    tooltip = "Toggle sequence edit mode"
+                    // className = ExploreStyles.SequenceEditToggleButton
+                  ) // .mini.compact
                 )
               .getOrElse(executed)
           }
@@ -121,10 +132,16 @@ object SequenceTile
                             visits,
                             config,
                             acquisitionSn,
-                            scienceSn
+                            scienceSn,
+                            props.isEditing
                           )
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
-                          GmosNorthImagingSequenceTable(visits, config, snPerFilter)
+                          GmosNorthImagingSequenceTable(
+                            visits,
+                            config,
+                            snPerFilter,
+                            props.isEditing
+                          )
                         case _                                                        => mismatchError
                     case SequenceData(InstrumentExecutionConfig.GmosSouth(config), signalToNoise) =>
                       val visits: List[Visit.GmosSouth] =
@@ -139,10 +156,16 @@ object SequenceTile
                             visits,
                             config,
                             acquisitionSn,
-                            scienceSn
+                            scienceSn,
+                            props.isEditing
                           )
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
-                          GmosSouthImagingSequenceTable(visits, config, snPerFilter)
+                          GmosSouthImagingSequenceTable(
+                            visits,
+                            config,
+                            snPerFilter,
+                            props.isEditing
+                          )
                         case _                                                        => mismatchError
                     case SequenceData(
                           InstrumentExecutionConfig.Flamingos2(config),
@@ -155,7 +178,8 @@ object SequenceTile
                           .orEmpty,
                         config,
                         acquisitionSn,
-                        scienceSn
+                        scienceSn,
+                        props.isEditing
                       )
                     case _                                                                        => mismatchError
                   },

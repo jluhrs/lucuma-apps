@@ -40,8 +40,9 @@ trait SequenceTableDefs[D] extends SequenceRowBuilder[D]:
     selectedStepId:     Option[Step.Id],
     datasetIdsInFlight: Set[Dataset.Id],
     onBreakpointFlip:   (Observation.Id, Step.Id) => Callback,
-    onDatasetQaChange:  Dataset.Id => EditableQaFields => Callback
-  )
+    onDatasetQaChange:  Dataset.Id => EditableQaFields => Callback,
+    isEditing:          IsEditing = IsEditing.False
+  ) extends SequenceTableMeta
 
   protected val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta]
 

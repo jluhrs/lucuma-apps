@@ -16,6 +16,7 @@ private trait SequenceTable[S, D]:
   def visits: List[Visit[D]]
   def config: ExecutionConfig[S, D]
   def signalToNoise: SequenceType => D => Option[SignalToNoise]
+  def isEditing: IsEditing
 
   private def futureSteps(
     seqType:        SequenceType,

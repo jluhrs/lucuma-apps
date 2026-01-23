@@ -74,6 +74,7 @@ import lucuma.schemas.model.BasicConfiguration
 import lucuma.schemas.model.CentralWavelength
 import lucuma.schemas.model.TargetWithId
 import lucuma.ui.reusability.given
+import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sso.UserVault
 import lucuma.ui.syntax.all.*
 import lucuma.ui.syntax.all.given
@@ -290,6 +291,7 @@ object ObsTabTiles:
         roleLayouts         <- useState(roleLayout(props.userPreferences.get, props.calibrationRole))
         _                   <- useEffectWithDeps(props.calibrationRole): role =>
                                  roleLayouts.setState(roleLayout(props.userPreferences.get, role))
+        isEditing           <- useStateView(IsEditing.False)
       yield
         import ctx.given
 
@@ -406,7 +408,8 @@ object ObsTabTiles:
               asterismIds.get,
               customSedTimestamps,
               props.calibrationRole,
-              sequenceChanged
+              sequenceChanged,
+              isEditing
             )
 
           val selectedItcConfig: Option[List[ItcInstrumentConfig]] =
