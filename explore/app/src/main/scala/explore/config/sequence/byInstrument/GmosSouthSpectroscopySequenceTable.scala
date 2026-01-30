@@ -18,7 +18,8 @@ final case class GmosSouthSpectroscopySequenceTable(
   config:       ExecutionConfig.GmosSouth,
   acquisitonSN: Option[SignalToNoiseAt],
   scienceSN:    Option[SignalToNoiseAt],
-  isEditing:    IsEditing
+  isEditing:    IsEditing,
+  i:            Int // TODO This is a temporary mechanism for demo purposes
 ) extends ReactFnProps(GmosSouthSpectroscopySequenceTable.component)
     with SequenceTable[gmos.StaticConfig.GmosSouth, gmos.DynamicConfig.GmosSouth]
     with SpectroscopySequenceTable[gmos.DynamicConfig.GmosSouth]

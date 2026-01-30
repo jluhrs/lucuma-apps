@@ -17,6 +17,7 @@ private trait SequenceTable[S, D]:
   def config: ExecutionConfig[S, D]
   def signalToNoise: SequenceType => D => Option[SignalToNoise]
   def isEditing: IsEditing
+  def i: Int // TODO This is a temporary mechanism for demo purposes
 
   private def futureSteps(
     seqType:        SequenceType,

@@ -18,7 +18,8 @@ final case class GmosSouthImagingSequenceTable(
   visits:      List[Visit.GmosSouth],
   config:      ExecutionConfig.GmosSouth,
   snPerFilter: Map[GmosSouthFilter, SignalToNoiseAt],
-  isEditing:   IsEditing = IsEditing.False
+  isEditing:   IsEditing = IsEditing.False,
+  i:           Int // TODO This is a temporary mechanism for demo purposes
 ) extends ReactFnProps(GmosSouthImagingSequenceTable.component)
     with SequenceTable[gmos.StaticConfig.GmosSouth, gmos.DynamicConfig.GmosSouth]
     with ImagingSequenceTable[gmos.DynamicConfig.GmosSouth, GmosSouthFilter]:

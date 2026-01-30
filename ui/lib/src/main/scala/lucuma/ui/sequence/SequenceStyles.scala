@@ -25,6 +25,8 @@ object SequenceStyles:
   val VisitStepExtraDatasetItem     = Css("lucuma-sequence-visit-extra-row-dataset-item")
   val VisitStepExtraDatasetQAStatus = Css("lucuma-sequence-visit-extra-row-dataset-qa-status")
 
+  val SequenceInput = Css("lucuma-sequence-input")
+
   val CurrentHeader = Css("lucuma-sequence-current-header")
 
   object StepType:

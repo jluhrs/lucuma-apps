@@ -20,7 +20,8 @@ final case class Flamingos2SequenceTable(
   config:       ExecutionConfig.Flamingos2,
   acquisitonSN: Option[SignalToNoiseAt],
   scienceSN:    Option[SignalToNoiseAt],
-  isEditing:    IsEditing
+  isEditing:    IsEditing,
+  i:            Int // TODO This is a temporary mechanism for demo purposes
 ) extends ReactFnProps(Flamingos2SequenceTable.component)
     with SequenceTable[Flamingos2StaticConfig, Flamingos2DynamicConfig]
     with SpectroscopySequenceTable[Flamingos2DynamicConfig]

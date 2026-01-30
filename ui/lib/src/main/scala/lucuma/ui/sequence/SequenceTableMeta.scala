@@ -3,5 +3,10 @@
 
 package lucuma.ui.sequence
 
-trait SequenceTableMeta:
+import cats.Endo
+import lucuma.core.model.sequence.Step
+import japgolly.scalajs.react.Callback
+
+trait SequenceTableMeta[D]:
   def isEditing: IsEditing
+  def modRow: Step.Id => Endo[SequenceRow[D]] => Callback

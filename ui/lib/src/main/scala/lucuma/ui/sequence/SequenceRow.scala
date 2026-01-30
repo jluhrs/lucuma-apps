@@ -21,6 +21,10 @@ import lucuma.core.util.TimestampInterval
 import lucuma.react.table.RowId
 import lucuma.schemas.model.StepRecord
 import lucuma.schemas.model.Visit
+import monocle.Prism
+import monocle.macros.GenPrism
+import monocle.Lens
+import monocle.Focus
 
 /**
  * A row of a sequence table. It can be one of:
@@ -164,6 +168,8 @@ object SequenceRow:
 
     given [D: Eq]: Eq[FutureStep[D]] = Eq.derived
 
+    def step[D]: Lens[FutureStep[D], Step[D]] = Focus[FutureStep[D]](_.step)
+
   sealed abstract class Executed[+D] extends SequenceRow[D]:
     val isFinished   = true
     val stepEstimate = none
@@ -211,3 +217,6 @@ object SequenceRow:
     case (a: Executed.ExecutedVisit[D], b: Executed.ExecutedVisit[D]) => a === b
     case (a: Executed.ExecutedStep[D], b: Executed.ExecutedStep[D])   => a === b
     case _                                                            => false
+
+  def futureStep[D]: Prism[SequenceRow[D], FutureStep[D]] =
+    GenPrism[SequenceRow[D], FutureStep[D]]

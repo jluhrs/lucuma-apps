@@ -43,6 +43,12 @@
   .p-datatable-tbody > tr:last-of-type > td {
     border-bottom: 1px var(--surface-border) solid;
   }
+
+  .lucuma-sequence-input input {
+    width: 100%;
+    border: inherit;
+    text-align: center;
+  }
 }
 
 .lucuma-sequence-step-guided {
