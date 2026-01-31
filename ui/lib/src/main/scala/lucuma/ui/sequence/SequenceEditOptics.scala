@@ -6,6 +6,7 @@ package lucuma.ui.sequence
 import cats.Endo
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
+import lucuma.core.enums.SequenceType
 import lucuma.core.model.sequence.Step
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.gmos
@@ -51,14 +52,14 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
   private val flamingos2: Optional[SequenceRow[D], Flamingos2DynamicConfig] =
     dynamicConfig.andThen(flamingos2DyamicConfig)
 
-  private def optionalsReplace[S, A](optionals: Optional[S, A]*)(a: A): S => S =
+  private def combineOptionalsReplace[S, A](optionals: Optional[S, A]*)(a: A): S => S =
     Function.chain(optionals.map(_.replace(a)))
 
-  private val seqTraversal: Traversal[List[SequenceRow[D]], SequenceRow[D]] =
+  private val sequenceTraversal: Traversal[List[SequenceRow[D]], SequenceRow[D]] =
     Traversal.fromTraverse[List, SequenceRow[D]]
 
   private def selectRow(stepId: Step.Id): Traversal[List[SequenceRow[D]], SequenceRow[D]] =
-    seqTraversal.filter(_.id === stepId.asRight)
+    sequenceTraversal.filter(_.id === stepId.asRight)
 
   private def modifyRow[A](apply: A => Endo[SequenceRow[D]])(stepId: Step.Id)(
     a: A
@@ -68,20 +69,29 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
   private type CellContextType[A] =
     CellContext[Expandable[HeaderOrRow[T]], Option[A], TM, ?, TF, ?, ?]
 
-  private def getStepId[A](c: CellContextType[A]): Option[Step.Id] =
-    c.row.original.value.map(getStep).toOption.flatMap(_.flatMap(_.id.toOption))
+  private def getFutureStep[A](c: CellContextType[A]): Option[SequenceRow.FutureStep[D]] =
+    c.row.original.value
+      .map(getStep)
+      .toOption
+      .flatMap:
+        _.collect:
+          case SequenceRow.futureStep(fs) => fs
 
   protected def handleRowEdit[A](
     c: CellContextType[A]
-  )(f: Step.Id => A => Endo[List[SequenceRow[D]]])(value: Option[A]): Callback =
-    (c.table.options.meta, getStepId(c), value).tupled
-      .foldMap: (meta, stepId, v) =>
-        // ponele
-        meta.modAcquisition(f(stepId)(v))
+  )(rowEdit: Step.Id => A => Endo[List[SequenceRow[D]]])(value: Option[A]): Callback =
+    (c.table.options.meta, getFutureStep(c), value).tupled
+      .foldMap: (meta, futureStep, v) =>
+        val mod: Endo[List[SequenceRow[D]]] => Callback =
+          futureStep.seqType match
+            case SequenceType.Acquisition => meta.modAcquisition
+            case SequenceType.Science     => meta.modScience
+        mod(rowEdit(futureStep.stepId)(v))
 
+  // Follow this template for other fields
   protected val exposureReplace: Step.Id => TimeSpan => Endo[List[SequenceRow[D]]] =
     modifyRow:
-      optionalsReplace(
+      combineOptionalsReplace(
         gmosNorth.andThen(gmos.DynamicConfig.GmosNorth.exposure),
         gmosSouth.andThen(gmos.DynamicConfig.GmosSouth.exposure),
         flamingos2.andThen(Flamingos2DynamicConfig.exposure)
