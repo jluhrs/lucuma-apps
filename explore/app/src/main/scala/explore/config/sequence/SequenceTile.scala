@@ -6,6 +6,7 @@ package explore.config.sequence
 import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
+import crystal.react.hooks.*
 import crystal.react.given
 import explore.*
 import explore.components.*
@@ -67,15 +68,15 @@ object SequenceTile
         _            <- useEffectWithDeps(liveSequence.data): dataPot =>
                           props.sequenceChanged.set(dataPot.void)
       yield
+        val execution         = props.obsExecution
+        val staleCss          = execution.digest.staleClass
+        val staleTooltip      = execution.digest.staleTooltip
+        val programTimeCharge = execution.programTimeCharge.value
+
+        val executed = timeDisplay("Executed", programTimeCharge)
+
         val title =
-          <.span(ExploreStyles.SequenceTileTitle) {
-            val execution         = props.obsExecution
-            val staleCss          = execution.digest.staleClass
-            val staleTooltip      = execution.digest.staleTooltip
-            val programTimeCharge = execution.programTimeCharge.value
-
-            val executed = timeDisplay("Executed", programTimeCharge)
-
+          <.span(
             execution.digest.programTimeEstimate.value
               .map: plannedTime =>
                 val total   = programTimeCharge +| plannedTime
@@ -88,25 +89,17 @@ object SequenceTile
                 val planned =
                   timeDisplay("Planned", total, timeClass = staleCss, timeTooltip = staleTooltip)
 
-                <.span(
-                  ^.width := "100%",
-                  ^.display.flex,
-                  ^.justifyContent.spaceBetween /*, ^.gap := "1rem"*/
-                )(
-                  <.span(^.flex := "1 1 0"),
-                  <.span(
-                    // ^.flex := "1 1 0",
-                    ^.display.flex,
-                    ^.justifyContent.center /*, ^.gap := "1rem"*/
-                  )(
+                <.span(ExploreStyles.SequenceTileTitle)(
+                  <.span(ExploreStyles.SequenceTileTitleSide),
+                  <.span(ExploreStyles.SequenceTileTitleSummary)(
                     HelpIcon("target/main/sequence-times.md".refined),
                     planned,
                     executed,
                     pending
                   ),
-                  <.span(^.flex := "1 1 0",
-                         ^.display.flex,
-                         ^.justifyContent.flexEnd /*, ^.gap := "1rem"*/
+                  <.span(
+                    ExploreStyles.SequenceTileTitleSide,
+                    ExploreStyles.SequenceTileTitleEdit
                   )(
                     Button(
                       onClick = props.isEditing.set(IsEditing.True),
@@ -138,7 +131,7 @@ object SequenceTile
                   )
                 )
               .getOrElse(executed)
-          }
+          )
 
         val mismatchError = Message(
           text = "ERROR: Sequence and S/N are inconsistent.",
@@ -236,6 +229,3 @@ object SequenceTile
                   )
                 )
             )
-
-        TileContents(title, body)
-    )
