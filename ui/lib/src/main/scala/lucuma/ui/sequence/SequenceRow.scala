@@ -21,10 +21,10 @@ import lucuma.core.util.TimestampInterval
 import lucuma.react.table.RowId
 import lucuma.schemas.model.StepRecord
 import lucuma.schemas.model.Visit
+import monocle.Focus
+import monocle.Lens
 import monocle.Prism
 import monocle.macros.GenPrism
-import monocle.Lens
-import monocle.Focus
 
 /**
  * A row of a sequence table. It can be one of:

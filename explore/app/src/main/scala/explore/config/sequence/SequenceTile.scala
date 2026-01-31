@@ -28,6 +28,8 @@ import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import lucuma.react.primereact.Message
 import lucuma.react.primereact.Button
+import lucuma.react.primereact.Message
+import lucuma.react.primereact.TooltipOptions
 import lucuma.refined.*
 import lucuma.schemas.model.ExecutionVisits
 import lucuma.schemas.model.ModeSignalToNoise
@@ -37,7 +39,6 @@ import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.SequenceData
 import lucuma.ui.syntax.all.*
 import lucuma.ui.syntax.all.given
-import lucuma.react.primereact.TooltipOptions
 
 import scala.collection.immutable.SortedSet
 

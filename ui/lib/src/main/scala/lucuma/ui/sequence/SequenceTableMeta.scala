@@ -4,8 +4,8 @@
 package lucuma.ui.sequence
 
 import cats.Endo
-import lucuma.core.model.sequence.Step
 import japgolly.scalajs.react.Callback
+import lucuma.core.model.sequence.Step
 
 trait SequenceTableMeta[D]:
   def isEditing: IsEditing

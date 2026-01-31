@@ -3,6 +3,7 @@
 
 package observe.ui.components.sequence
 
+import cats.Endo
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
@@ -41,8 +42,9 @@ trait SequenceTableDefs[D] extends SequenceRowBuilder[D]:
     datasetIdsInFlight: Set[Dataset.Id],
     onBreakpointFlip:   (Observation.Id, Step.Id) => Callback,
     onDatasetQaChange:  Dataset.Id => EditableQaFields => Callback,
-    isEditing:          IsEditing = IsEditing.False
-  ) extends SequenceTableMeta
+    isEditing:          IsEditing = IsEditing.False,
+    modRow:             Step.Id => Endo[SequenceRow[D]] => Callback = _ => _ => Callback.empty
+  ) extends SequenceTableMeta[D]
 
   protected val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta]
 

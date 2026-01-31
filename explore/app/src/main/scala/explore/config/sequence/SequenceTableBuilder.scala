@@ -15,6 +15,7 @@ import explore.model.reusability.given
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.Instrument
+import lucuma.core.model.sequence.Step
 import lucuma.react.SizePx
 import lucuma.react.resizeDetector.hooks.*
 import lucuma.react.syntax.*
@@ -26,12 +27,11 @@ import lucuma.ui.syntax.all.given
 import lucuma.ui.table.*
 import lucuma.ui.table.ColumnSize.*
 import lucuma.ui.table.hooks.*
-import lucuma.core.model.sequence.Step
-
-import scala.scalajs.LinkingInfo
+import monocle.Focus
 import monocle.Lens
 import monocle.Optional
-import monocle.Focus
+
+import scala.scalajs.LinkingInfo
 
 private type SequenceColumnsType[D] =
   SequenceColumns[D, SequenceIndexedRow[D], SequenceRow[D], Nothing, Nothing, Nothing]

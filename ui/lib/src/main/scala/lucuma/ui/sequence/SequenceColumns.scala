@@ -3,6 +3,7 @@
 
 package lucuma.ui.sequence
 
+import cats.Endo
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
@@ -10,6 +11,9 @@ import lucuma.core.enums.Instrument
 import lucuma.core.math.Offset
 import lucuma.core.math.SignalToNoise
 import lucuma.core.math.Wavelength
+import lucuma.core.model.sequence.Step
+import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
+import lucuma.core.model.sequence.gmos
 import lucuma.core.util.TimeSpan
 import lucuma.react.common.*
 import lucuma.react.primereact.InputNumber
@@ -21,10 +25,6 @@ import lucuma.ui.table.*
 import lucuma.ui.table.ColumnSize.*
 
 import SequenceRowFormatters.*
-import lucuma.core.model.sequence.Step
-import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
-import lucuma.core.model.sequence.gmos
-import cats.Endo
 
 // `T` is the actual type of the table row, from which we extract an `R` using `getStep`.
 // `D` is the `DynamicConfig`.
