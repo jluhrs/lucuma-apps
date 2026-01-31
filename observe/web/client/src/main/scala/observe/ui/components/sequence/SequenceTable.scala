@@ -62,7 +62,7 @@ private trait SequenceTable[S, D](
     atoms:   List[Atom[D]],
     seqType: SequenceType
   ): List[SequenceRow.FutureStep[D]] =
-    SequenceRow.FutureStep.fromAtoms(atoms, signalToNoise(seqType))
+    SequenceRow.FutureStep.fromAtoms(atoms, signalToNoise(seqType), seqType)
 
   protected[sequence] lazy val currentAtomPendingSteps: List[ObserveStep] =
     executionState.loadedSteps.filterNot(_.isFinished)

@@ -43,7 +43,8 @@ trait SequenceTableDefs[D] extends SequenceRowBuilder[D]:
     onBreakpointFlip:   (Observation.Id, Step.Id) => Callback,
     onDatasetQaChange:  Dataset.Id => EditableQaFields => Callback,
     isEditing:          IsEditing = IsEditing.False,
-    modRow:             Step.Id => Endo[SequenceRow[D]] => Callback = _ => _ => Callback.empty
+    modAcquisition:     Endo[List[SequenceRow[D]]] => Callback = _ => Callback.empty,
+    modScience:         Endo[List[SequenceRow[D]]] => Callback = _ => Callback.empty
   ) extends SequenceTableMeta[D]
 
   protected val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta]

@@ -15,7 +15,6 @@ import explore.model.reusability.given
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.Instrument
-import lucuma.core.model.sequence.Step
 import lucuma.react.SizePx
 import lucuma.react.resizeDetector.hooks.*
 import lucuma.react.syntax.*
@@ -29,7 +28,6 @@ import lucuma.ui.table.ColumnSize.*
 import lucuma.ui.table.hooks.*
 import monocle.Focus
 import monocle.Lens
-import monocle.Optional
 
 import scala.scalajs.LinkingInfo
 
@@ -42,8 +40,9 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
   private type Props = SequenceTable[S, D]
 
   private case class TableMeta[D](
-    isEditing: IsEditing = IsEditing.False,
-    modRow:    Step.Id => Endo[SequenceRow[D]] => Callback
+    isEditing:      IsEditing = IsEditing.False,
+    modAcquisition: Endo[List[SequenceRow[D]]] => Callback,
+    modScience:     Endo[List[SequenceRow[D]]] => Callback
   ) extends SequenceTableMeta[D]
 
   private lazy val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta[D]]
@@ -102,29 +101,30 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
   protected[sequence] val component =
     ScalaFnComponent[Props]: props =>
       for
-        ctx            <- useContext(AppContext.ctx)
-        visitsData     <- useMemo(props.visits):
-                            visitsSequences(_, none)
-        sequenceCopies <- useStateView:
-                            SequenceCopies(
-                              view = SequenceRows(props.acquisitionRows,
-                                                  props.scienceRows
-                              ), // This shouldn't be in a View
-                              edit = SequenceRows(props.acquisitionRows, props.scienceRows)
-                            )
-        _              <- useEffectWithDeps(props.i): _ =>
-                            // TODO This is a temporary mechanism for demo purposes
-                            sequenceCopies.mod(sc => sc.copy(view = sc.edit))
-        _              <- useEffectWithDeps(props.isEditing): _ =>
-                            sequenceCopies.mod(sc => sc.copy(edit = sc.view))
+        ctx                         <- useContext(AppContext.ctx)
+        visitsData                  <- useMemo(props.visits):
+                                         visitsSequences(_, none)
+        sequenceCopies              <- useStateView:
+                                         SequenceCopies(
+                                           view = SequenceRows(props.acquisitionRows,
+                                                               props.scienceRows
+                                           ), // This shouldn't be in a View
+                                           edit = SequenceRows(props.acquisitionRows, props.scienceRows)
+                                         )
+        _                           <- useEffectWithDeps(props.i): _ =>
+                                         // TODO This is a temporary mechanism for demo purposes
+                                         sequenceCopies.mod(sc => sc.copy(view = sc.edit))
+        _                           <- useEffectWithDeps(props.isEditing): _ =>
+                                         sequenceCopies.mod(sc => sc.copy(edit = sc.view))
         // Update our copy of the sequence when it changes externally.
-        _              <- useEffectWithDeps(props.acquisitionRows, props.scienceRows): (acquisiton, science) =>
-                            sequenceCopies.mod:
-                              val newRows: SequenceRows = SequenceRows(acquisiton, science)
-                              SequenceCopies.view.replace(newRows) >>>
-                                (if props.isEditing then SequenceCopies.edit.replace(newRows) else identity)
-        effectiveRows   = if props.isEditing then sequenceCopies.get.edit else sequenceCopies.get.view
-        rows           <-
+        _                           <- useEffectWithDeps(props.acquisitionRows, props.scienceRows): (acquisiton, science) =>
+                                         sequenceCopies.mod:
+                                           val newRows: SequenceRows = SequenceRows(acquisiton, science)
+                                           SequenceCopies.view.replace(newRows) >>>
+                                             (if props.isEditing then SequenceCopies.edit.replace(newRows) else identity)
+        effectiveRows: SequenceRows  =
+          if props.isEditing then sequenceCopies.get.edit else sequenceCopies.get.view
+        rows                        <-
           useMemo(
             (visitsData, effectiveRows, props.currentVisitId)
           ): (visitsData, rows, currentVisitId) =>
@@ -136,31 +136,11 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
               rows.acquisition,
               rows.science
             )
-        resize         <- useResizeDetector
-        dynTable       <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
-        table          <-
+        resize                      <- useResizeDetector
+        dynTable                    <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
+        editView: View[SequenceRows] = sequenceCopies.zoom(SequenceCopies.edit)
+        table                       <-
           useReactTable:
-            // TODO For demo purposes, this should be a map and avoid unsafe gets.
-            def modSequenceRow(rows: View[List[SequenceRow[D]]])(stepId: Step.Id)(
-              mod: Endo[SequenceRow[D]]
-            ): Callback =
-              rows
-                .zoom(
-                  Optional[List[SequenceRow[D]], SequenceRow[D]] { rs =>
-                    rs.find(_.id === stepId.asRight)
-                  } { updatedRow => rs =>
-                    rs.map:
-                      case row if row.id === stepId.asRight => updatedRow
-                      case row                              => row
-                  }
-                )
-                .mod(mod)
-
-            def modRow(stepId: Step.Id)(mod: Endo[SequenceRow[D]]): Callback =
-              val editView: View[SequenceRows] = sequenceCopies.zoom(SequenceCopies.edit)
-              modSequenceRow(editView.zoom(SequenceRows.acquisition))(stepId)(mod) >>
-                modSequenceRow(editView.zoom(SequenceRows.science))(stepId)(mod)
-
             TableOptions(
               columns.map(dynTable.setInitialColWidths),
               rows,
@@ -178,7 +158,11 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                 columnVisibility = dynTable.columnVisibility
               ),
               onColumnSizingChange = dynTable.onColumnSizingChangeHandler,
-              meta = TableMeta(props.isEditing, modRow)
+              meta = TableMeta(
+                props.isEditing,
+                editView.zoom(SequenceRows.acquisition).mod,
+                editView.zoom(SequenceRows.science).mod
+              )
             )
       yield
         val extraRowMod: TagMod =

@@ -3,7 +3,6 @@
 
 package lucuma.ui.sequence
 
-import cats.Endo
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
@@ -11,9 +10,6 @@ import lucuma.core.enums.Instrument
 import lucuma.core.math.Offset
 import lucuma.core.math.SignalToNoise
 import lucuma.core.math.Wavelength
-import lucuma.core.model.sequence.Step
-import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
-import lucuma.core.model.sequence.gmos
 import lucuma.core.util.TimeSpan
 import lucuma.react.common.*
 import lucuma.react.primereact.InputNumber
@@ -35,7 +31,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   colDef:   ColumnDef.Applied[Expandable[HeaderOrRow[T]], TM, CM, TF],
   getStep:  T => Option[R],
   getIndex: T => Option[StepIndex]
-):
+) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStep):
   private lazy val indexAndTypeCol: colDef.TypeFor[(Option[StepIndex], Option[StepTypeDisplay])] =
     colDef(
       SequenceColumns.IndexAndTypeColumnId,
@@ -50,51 +46,6 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
         )
     )
 
-  import monocle.Prism
-  import monocle.Optional
-
-  private val dynamicConfig: Optional[SequenceRow[D], D] = SequenceRow
-    .futureStep[D]
-    .andThen(SequenceRow.FutureStep.step)
-    .andThen(Step.instrumentConfig)
-
-  private val gmosDynamicConfig: Prism[D, gmos.DynamicConfig] =
-    Prism[D, gmos.DynamicConfig] {
-      case g: gmos.DynamicConfig => Some(g)
-      case _                     => None
-    }(_.asInstanceOf[D])
-
-  private val gmosNorthDynamicConfig: Prism[D, gmos.DynamicConfig.GmosNorth] =
-    gmosDynamicConfig.andThen(gmos.DynamicConfig.gmosNorth)
-
-  private val gmosSouthDynamicConfig: Prism[D, gmos.DynamicConfig.GmosSouth] =
-    gmosDynamicConfig.andThen(gmos.DynamicConfig.gmosSouth)
-
-  private val flamingos2DyamicConfig: Prism[D, Flamingos2DynamicConfig] =
-    Prism[D, Flamingos2DynamicConfig] {
-      case f2: Flamingos2DynamicConfig => Some(f2)
-      case _                           => None
-    }(_.asInstanceOf[D])
-
-  private val gmosNorth: Optional[SequenceRow[D], gmos.DynamicConfig.GmosNorth] =
-    dynamicConfig.andThen(gmosNorthDynamicConfig)
-
-  private val gmosSouth: Optional[SequenceRow[D], gmos.DynamicConfig.GmosSouth] =
-    dynamicConfig.andThen(gmosSouthDynamicConfig)
-
-  private val flamingos2: Optional[SequenceRow[D], Flamingos2DynamicConfig] =
-    dynamicConfig.andThen(flamingos2DyamicConfig)
-
-  private def optionalsReplace[S, T](optionals: Optional[S, T]*)(t: T): S => S =
-    Function.chain(optionals.map(_.replace(t)))
-
-  private val exposureReplace: TimeSpan => Endo[SequenceRow[D]] =
-    optionalsReplace(
-      gmosNorth.andThen(gmos.DynamicConfig.GmosNorth.exposure),
-      gmosSouth.andThen(gmos.DynamicConfig.GmosSouth.exposure),
-      flamingos2.andThen(Flamingos2DynamicConfig.exposure)
-    )
-
   private lazy val exposureCol: colDef.TypeFor[Option[TimeSpan]] =
     colDef(
       SequenceColumns.ExposureColumnId,
@@ -103,27 +54,18 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
       cell = c =>
         val isEditing: Boolean = c.table.options.meta.exists(_.isEditing.value)
         (c.value, c.row.original.value.toOption.flatMap(getStep).flatMap(_.instrument))
-          .mapN[VdomNode]: (e, i) =>
+          .mapN[VdomNode]: (v, i) =>
             if isEditing then
-              InputNumber(
+              InputNumber( // TODO Decimals according to instrument
                 id = s"exposure-${c.row.index}",
-                value = e.toSeconds.toDouble,
+                value = v.toSeconds.toDouble,
                 onValueChange = e =>
-                  c.table.options.meta.foldMap(
-                    _.modRow(
-                      c.row.original.value.toOption
-                        .flatMap(getStep)
-                        .flatMap(_.id.toOption)
-                        .get // Unsafe?
-                    )(
-                      exposureReplace(
-                        TimeSpan.fromSeconds(e.value.get.asInstanceOf[Double].toLong).get // Unsafe?
-                      )
-                    )
-                  ),
+                  handleRowEdit(c)(exposureReplace):
+                    TimeSpan.fromSeconds(e.value.get.asInstanceOf[Double].toLong)
+                ,
                 clazz = SequenceStyles.SequenceInput
               )
-            else FormatExposureTime(i)(e).value
+            else FormatExposureTime(i)(v).value
     )
 
   private lazy val guideStateCol: colDef.TypeFor[Option[Boolean]] =

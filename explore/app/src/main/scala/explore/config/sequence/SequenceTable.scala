@@ -31,7 +31,8 @@ private trait SequenceTable[S, D]:
               case SequenceType.Science => sequence.possibleFuture
               case _                    => List.empty
           ),
-          signalToNoise(seqType)
+          signalToNoise(seqType),
+          seqType
         )
     if (currentSeqType.contains_(seqType)) allSteps.tail
     else allSteps

@@ -43,6 +43,7 @@ import lucuma.ui.syntax.all.given
 
 import scala.collection.immutable.SortedSet
 
+// TODO PENDING!!!! canMinimize = !isEditing.get
 final case class SequenceTile(
   obsId:               Observation.Id,
   obsExecution:        Execution,
@@ -54,7 +55,7 @@ final case class SequenceTile(
 ) extends Tile[SequenceTile](ObsTabTileIds.SequenceId.id, "Sequence")(SequenceTile)
 
 object SequenceTile
-    extends TileComponent[SequenceTile]((props, _) =>
+    extends TileComponent[SequenceTile]((props, sizeState) =>
       import SequenceTileHelper.*
 
       for
@@ -107,7 +108,7 @@ object SequenceTile
                       icon = Icons.Pencil,
                       tooltip = "Enter sequence editing mode",
                       tooltipOptions = TooltipOptions.Top
-                    ).mini.compact.when(!props.isEditing.get),
+                    ).mini.compact.when(!props.isEditing.get && sizeState.isMaximized),
                     React
                       .Fragment(
                         Button(
@@ -229,3 +230,6 @@ object SequenceTile
                   )
                 )
             )
+
+        TileContents(title, body)
+    )

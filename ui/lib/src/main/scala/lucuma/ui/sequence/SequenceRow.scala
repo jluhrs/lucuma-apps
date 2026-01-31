@@ -7,6 +7,7 @@ import cats.Eq
 import cats.derived.*
 import cats.syntax.all.*
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.SequenceType
 import lucuma.core.enums.StepGuideState
 import lucuma.core.math.Offset
 import lucuma.core.math.SignalToNoise
@@ -126,7 +127,8 @@ object SequenceRow:
     step:          Step[D],
     atomId:        Atom.Id,
     firstOf:       Option[Int],
-    signalToNoise: Option[SignalToNoise]
+    signalToNoise: Option[SignalToNoise],
+    seqType:       SequenceType
   ) extends SequenceRow[D]:
     val id               = step.id.asRight
     val instrumentConfig = step.instrumentConfig.some
@@ -140,30 +142,32 @@ object SequenceRow:
   object FutureStep:
     def fromAtom[D](
       atom:          Atom[D],
-      signalToNoise: D => Option[SignalToNoise]
+      signalToNoise: D => Option[SignalToNoise],
+      seqType:       SequenceType
     ): List[FutureStep[D]] =
       FutureStep(
         atom.steps.head,
         atom.id,
         atom.steps.length.some.filter(_ > 1),
-        atom.steps.head.getSignalToNoise(signalToNoise)
-      ) +: atom.steps.tail.map(step =>
-        SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise))
-      )
+        atom.steps.head.getSignalToNoise(signalToNoise),
+        seqType
+      ) +: atom.steps.tail.map: step =>
+        SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise), seqType)
 
     def fromAtoms[D](
       atoms:         List[Atom[D]],
-      signalToNoise: D => Option[SignalToNoise]
+      signalToNoise: D => Option[SignalToNoise],
+      seqType:       SequenceType
     ): List[FutureStep[D]] =
       atoms.flatMap(atom =>
         FutureStep(
           atom.steps.head,
           atom.id,
           atom.steps.length.some.filter(_ > 1),
-          atom.steps.head.getSignalToNoise(signalToNoise)
-        ) +: atom.steps.tail.map(step =>
-          SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise))
-        )
+          atom.steps.head.getSignalToNoise(signalToNoise),
+          seqType
+        ) +: atom.steps.tail.map: step =>
+          SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise), seqType)
       )
 
     given [D: Eq]: Eq[FutureStep[D]] = Eq.derived
