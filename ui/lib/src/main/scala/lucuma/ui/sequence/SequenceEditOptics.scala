@@ -4,9 +4,10 @@
 package lucuma.ui.sequence
 
 import cats.Endo
+import cats.effect.IO
 import cats.syntax.all.*
+import crystal.react.syntax.effect.*
 import japgolly.scalajs.react.*
-import lucuma.core.enums.SequenceType
 import lucuma.core.model.sequence.Step
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.gmos
@@ -77,16 +78,22 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
         _.collect:
           case SequenceRow.futureStep(fs) => fs
 
-  protected def handleRowEdit[A](
+  protected def handleRowEditAsync[A, B](
     c: CellContextType[A]
-  )(rowEdit: Step.Id => A => Endo[List[SequenceRow[D]]])(value: Option[A]): Callback =
+  )(rowEdit: Step.Id => B => IO[Endo[List[SequenceRow[D]]]])(value: Option[B]): Callback =
     (c.table.options.meta, getFutureStep(c), value).tupled
       .foldMap: (meta, futureStep, v) =>
-        val mod: Endo[List[SequenceRow[D]]] => Callback =
-          futureStep.seqType match
-            case SequenceType.Acquisition => meta.modAcquisition
-            case SequenceType.Science     => meta.modScience
-        mod(rowEdit(futureStep.stepId)(v))
+        rowEdit(futureStep.stepId)(v)
+          .flatMap: mod =>
+            meta.seqTypeMod(futureStep.seqType)(mod).toAsync
+          .runAsyncAndForget
+
+  protected def handleRowEdit[A, B](
+    c: CellContextType[A]
+  )(rowEdit: Step.Id => B => Endo[List[SequenceRow[D]]])(value: Option[B]): Callback =
+    (c.table.options.meta, getFutureStep(c), value).tupled
+      .foldMap: (meta, futureStep, v) =>
+        meta.seqTypeMod(futureStep.seqType)(rowEdit(futureStep.stepId)(v))
 
   // Follow this template for other fields
   protected val exposureReplace: Step.Id => TimeSpan => Endo[List[SequenceRow[D]]] =
@@ -96,3 +103,18 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
         gmosSouth.andThen(gmos.DynamicConfig.GmosSouth.exposure),
         flamingos2.andThen(Flamingos2DynamicConfig.exposure)
       )
+
+  protected val cloneRow: Step.Id => Unit => IO[Endo[List[SequenceRow[D]]]] =
+    stepId =>
+      _ =>
+        IO.randomUUID.map: newId =>
+          rows =>
+            rows.zipWithIndex
+              .collectFirst:
+                case (SequenceRow.futureStep(fs), idx) if fs.stepId === stepId => (fs, idx)
+              .foldMap: (fs, idx) =>
+                val rowToClone      = SequenceRow.FutureStep.step
+                  .andThen(Step.id)
+                  .replace(Step.Id(newId))(fs)
+                val (before, after) = rows.splitAt(idx + 1)
+                before ++ (rowToClone :: after)

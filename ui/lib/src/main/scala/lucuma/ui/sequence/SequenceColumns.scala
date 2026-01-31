@@ -12,10 +12,12 @@ import lucuma.core.math.SignalToNoise
 import lucuma.core.math.Wavelength
 import lucuma.core.util.TimeSpan
 import lucuma.react.common.*
+import lucuma.react.primereact.Button
 import lucuma.react.primereact.InputNumber
 import lucuma.react.syntax.*
 import lucuma.react.table.*
 import lucuma.ui.format.formatSN
+import lucuma.ui.primereact.*
 import lucuma.ui.syntax.all.*
 import lucuma.ui.table.*
 import lucuma.ui.table.ColumnSize.*
@@ -56,14 +58,22 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
         (c.value, c.row.original.value.toOption.flatMap(getStep).flatMap(_.instrument))
           .mapN[VdomNode]: (v, i) =>
             if isEditing then
-              InputNumber( // TODO Decimals according to instrument
-                id = s"exposure-${c.row.index}",
-                value = v.toSeconds.toDouble,
-                onValueChange = e =>
-                  handleRowEdit(c)(exposureReplace):
-                    TimeSpan.fromSeconds(e.value.get.asInstanceOf[Double].toLong)
-                ,
-                clazz = SequenceStyles.SequenceInput
+              React.Fragment(
+                /// yey move somewhere else
+                Button(label = "Clone", onClick = handleRowEditAsync(c)(cloneRow)(().some))
+                  .withMods(^.width := "20px")
+                  .mini
+                  .compact,
+                /// yey move somewhere else
+                InputNumber( // TODO Decimals according to instrument
+                  id = s"exposure-${c.row.index}",
+                  value = v.toSeconds.toDouble,
+                  onValueChange = e =>
+                    handleRowEdit(c)(exposureReplace):
+                      TimeSpan.fromSeconds(e.value.get.asInstanceOf[Double].toLong)
+                  ,
+                  clazz = SequenceStyles.SequenceInput
+                )
               )
             else FormatExposureTime(i)(v).value
     )
