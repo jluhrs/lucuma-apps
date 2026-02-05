@@ -6,8 +6,8 @@ package explore.config.sequence
 import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
-import crystal.react.hooks.*
 import crystal.react.given
+import crystal.react.hooks.*
 import explore.*
 import explore.components.*
 import explore.components.HelpIcon
@@ -27,7 +27,6 @@ import lucuma.core.model.Target
 import lucuma.core.model.sequence.InstrumentExecutionConfig
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
-import lucuma.react.primereact.Message
 import lucuma.react.primereact.Button
 import lucuma.react.primereact.Message
 import lucuma.react.primereact.TooltipOptions
@@ -43,7 +42,6 @@ import lucuma.ui.syntax.all.given
 
 import scala.collection.immutable.SortedSet
 
-// TODO PENDING!!!! canMinimize = !isEditing.get
 final case class SequenceTile(
   obsId:               Observation.Id,
   obsExecution:        Execution,
@@ -52,7 +50,9 @@ final case class SequenceTile(
   calibrationRole:     Option[CalibrationRole],
   sequenceChanged:     View[Pot[Unit]],
   isEditing:           View[IsEditing]
-) extends Tile[SequenceTile](ObsTabTileIds.SequenceId.id, "Sequence")(SequenceTile)
+) extends Tile[SequenceTile](ObsTabTileIds.SequenceId.id, "Sequence", canMinimize = !isEditing.get)(
+      SequenceTile
+    )
 
 object SequenceTile
     extends TileComponent[SequenceTile]((props, sizeState) =>
@@ -166,16 +166,16 @@ object SequenceTile
                             config,
                             acquisitionSn,
                             scienceSn,
-                            props.isEditing,
-                            props.i
+                            props.isEditing.get,
+                            i.get
                           )
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
                           GmosNorthImagingSequenceTable(
                             visits,
                             config,
                             snPerFilter,
-                            props.isEditing,
-                            props.i
+                            props.isEditing.get,
+                            i.get
                           )
                         case _                                                        => mismatchError
                     case SequenceData(InstrumentExecutionConfig.GmosSouth(config), signalToNoise) =>
@@ -192,16 +192,16 @@ object SequenceTile
                             config,
                             acquisitionSn,
                             scienceSn,
-                            props.isEditing,
-                            props.i
+                            props.isEditing.get,
+                            i.get
                           )
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
                           GmosSouthImagingSequenceTable(
                             visits,
                             config,
                             snPerFilter,
-                            props.isEditing,
-                            props.i
+                            props.isEditing.get,
+                            i.get
                           )
                         case _                                                        => mismatchError
                     case SequenceData(
@@ -216,8 +216,8 @@ object SequenceTile
                         config,
                         acquisitionSn,
                         scienceSn,
-                        props.isEditing,
-                        props.i
+                        props.isEditing.get,
+                        i.get
                       )
                     case _                                                                        => mismatchError
                   },
