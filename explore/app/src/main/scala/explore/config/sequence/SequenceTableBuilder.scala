@@ -22,6 +22,7 @@ import lucuma.react.table.*
 import lucuma.schemas.model.enums.StepExecutionState
 import lucuma.ui.reusability.given
 import lucuma.ui.sequence.*
+import lucuma.ui.sequence.SequenceColumns.EditControlsColumnId
 import lucuma.ui.syntax.all.given
 import lucuma.ui.table.*
 import lucuma.ui.table.ColumnSize.*
@@ -138,6 +139,11 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
             )
         resize                      <- useResizeDetector
         dynTable                    <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
+        _                           <-
+          useEffectWithDeps(props.isEditing.value):
+            value => // We have to handle column visibility through dynTable, so that column widths are correctly recomputed
+              dynTable.onColumnVisibilityChangeHandler:
+                Updater.Mod(_.modify(_ + (EditControlsColumnId -> Visibility.fromVisible(value))))
         editView: View[SequenceRows] = sequenceCopies.zoom(SequenceCopies.edit)
         table                       <-
           useReactTable:

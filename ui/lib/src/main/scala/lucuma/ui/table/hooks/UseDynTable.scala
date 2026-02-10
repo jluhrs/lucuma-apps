@@ -4,7 +4,6 @@
 package lucuma.ui.table.hooks
 
 import japgolly.scalajs.react.*
-import japgolly.scalajs.react.hooks.CustomHook
 import lucuma.react.SizePx
 import lucuma.react.table.*
 import lucuma.ui.reusability.given
@@ -23,9 +22,10 @@ import lucuma.ui.table.ColumnSize.*
  * Make sure the table has `table-layout: fixed`.
  */
 class UseDynTable(
-  initialColumnSizes:              Map[ColumnId, ColumnSize],
-  colState:                        DynTable.ColState,
-  val onColumnSizingChangeHandler: Updater[ColumnSizing] => Callback
+  initialColumnSizes:                  Map[ColumnId, ColumnSize],
+  colState:                            DynTable.ColState,
+  val onColumnSizingChangeHandler:     Updater[ColumnSizing] => Callback,
+  val onColumnVisibilityChangeHandler: Updater[ColumnVisibility] => Callback
 ):
   def setInitialColWidths[R, TM, CM, TF](
     cols: List[ColumnDef[R, ?, TM, CM, TF, ?, ?]]
@@ -50,71 +50,16 @@ object UseDynTable:
               case Updater.Set(v)  => DynTable.ColState.resized.replace(v)(oldState)
               case Updater.Mod(fn) => DynTable.ColState.resized.modify(fn)(oldState)
 
-      UseDynTable(dynTableDef.columnSizes, colState.value, onColumnSizingChangeHandler)
+      def onColumnVisibilityChangeHandler(updater: Updater[ColumnVisibility]): Callback =
+        colState.modState: oldState =>
+          dynTableDef.adjustColSizes(width):
+            updater match
+              case Updater.Set(v)  => DynTable.ColState.visibility.replace(v)(oldState)
+              case Updater.Mod(fn) => DynTable.ColState.visibility.modify(fn)(oldState)
 
-  private val hook: CustomHook[(DynTable, SizePx), UseDynTable] =
-    CustomHook.fromHookResult(useDynTable(_, _))
-
-  object HooksApiExt {
-    sealed class Primary[Ctx, Step <: HooksApi.AbstractStep](api: HooksApi.Primary[Ctx, Step]):
-      /**
-       * Computes a dynamic table state, automatically computing column overflows and sizes.
-       *
-       * @param dynTable
-       *   Dynamic table definition.
-       * @param width
-       *   Table width in pixels.
-       */
-      final def useDynTable(dynTable: DynTable, width: SizePx)(using
-        step: Step
-      ): step.Next[UseDynTable] =
-        useDynTableBy(_ => (dynTable, width))
-
-      /**
-       * Computes a dynamic table state, automatically computing column overflows and sizes.
-       *
-       * @param dynTable
-       *   Dynamic table definition.
-       * @param width
-       *   Table width in pixels.
-       */
-      final def useDynTableBy(props: Ctx => (DynTable, SizePx))(using
-        step: Step
-      ): step.Next[UseDynTable] =
-        api.customBy(ctx => hook(props(ctx)))
-
-    final class Secondary[Ctx, CtxFn[_], Step <: HooksApi.SubsequentStep[Ctx, CtxFn]](
-      api: HooksApi.Secondary[Ctx, CtxFn, Step]
-    ) extends Primary[Ctx, Step](api):
-      /**
-       * Computes a dynamic table state, automatically computing column overflows and sizes.
-       *
-       * @param dynTable
-       *   Dynamic table definition.
-       * @param width
-       *   Table width in pixels.
-       */
-      def useDynTableBy(props: CtxFn[(DynTable, SizePx)])(using
-        step: Step
-      ): step.Next[UseDynTable] =
-        useDynTableBy(step.squash(props)(_))
-  }
-
-  protected trait HooksApiExt:
-    import HooksApiExt.*
-
-    implicit def hooksExtDynTable1[Ctx, Step <: HooksApi.AbstractStep](
-      api: HooksApi.Primary[Ctx, Step]
-    ): Primary[Ctx, Step] =
-      new Primary(api)
-
-    implicit def hooksExtDynTable2[
-      Ctx,
-      CtxFn[_],
-      Step <: HooksApi.SubsequentStep[Ctx, CtxFn]
-    ](
-      api: HooksApi.Secondary[Ctx, CtxFn, Step]
-    ): Secondary[Ctx, CtxFn, Step] =
-      new Secondary(api)
-
-  object syntax extends HooksApiExt
+      UseDynTable(
+        dynTableDef.columnSizes,
+        colState.value,
+        onColumnSizingChangeHandler,
+        onColumnVisibilityChangeHandler
+      )

@@ -34,6 +34,21 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   getStep:  T => Option[R],
   getIndex: T => Option[StepIndex]
 ) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStep):
+  private lazy val editControlsCol: colDef.TypeFor[Option[Unit]] =
+    colDef(
+      SequenceColumns.EditControlsColumnId,
+      _.value.toOption.as(()),
+      header = "",
+      cell = c =>
+        React.Fragment(
+          Button(icon = SequenceIcons.Clone, onClick = handleRowEditAsync(c)(cloneRow)(().some))
+            .withMods(^.width := "20px")
+            .mini
+            .compact,
+          Button(icon = SequenceIcons.Trash, onClick = Callback.empty).mini.compact
+        )
+    )
+
   private lazy val indexAndTypeCol: colDef.TypeFor[(Option[StepIndex], Option[StepTypeDisplay])] =
     colDef(
       SequenceColumns.IndexAndTypeColumnId,
@@ -59,12 +74,6 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
           .mapN[VdomNode]: (v, i) =>
             if isEditing then
               React.Fragment(
-                /// yey move somewhere else
-                Button(label = "Clone", onClick = handleRowEditAsync(c)(cloneRow)(().some))
-                  .withMods(^.width := "20px")
-                  .mini
-                  .compact,
-                /// yey move somewhere else
                 InputNumber( // TODO Decimals according to instrument
                   id = s"exposure-${c.row.index}",
                   value = v.toSeconds.toDouble,
@@ -184,6 +193,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
 
   lazy val ForGmos: List[colDef.TypeFor[?]] =
     List(
+      editControlsCol,
       indexAndTypeCol,
       exposureCol,
       guideStateCol,
@@ -201,6 +211,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
 
   lazy val ForFlamingos2: List[colDef.TypeFor[?]] =
     List(
+      editControlsCol,
       indexAndTypeCol,
       exposureCol,
       guideStateCol,
@@ -221,6 +232,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
       case _                                           => throw new Exception(s"Unimplemented instrument: $instrument")
 
 object SequenceColumns:
+  val EditControlsColumnId: ColumnId = ColumnId("editControls")
   val IndexAndTypeColumnId: ColumnId = ColumnId("stepType")
   val ExposureColumnId: ColumnId     = ColumnId("exposure")
   val GuideColumnId: ColumnId        = ColumnId("guide")
@@ -238,6 +250,7 @@ object SequenceColumns:
 
   object BaseColumnSizes {
     private val CommonColumnSizes: Map[ColumnId, ColumnSize] = Map(
+      EditControlsColumnId -> FixedSize(70.toPx),
       IndexAndTypeColumnId -> FixedSize(60.toPx),
       ExposureColumnId     -> Resizable(77.toPx, min = 77.toPx, max = 130.toPx),
       GuideColumnId        -> FixedSize(36.toPx),
