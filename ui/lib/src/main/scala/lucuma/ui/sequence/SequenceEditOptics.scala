@@ -104,6 +104,17 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
         flamingos2.andThen(Flamingos2DynamicConfig.exposure)
       )
 
+  protected val deleteRow: Step.Id => Unit => Endo[List[SequenceRow[D]]] =
+    stepId =>
+      _ =>
+        rows =>
+          rows.zipWithIndex
+            .collectFirst:
+              case (SequenceRow.futureStep(fs), idx) if fs.stepId === stepId => idx
+            .fold(rows): idx =>
+              val (before, after) = rows.splitAt(idx)
+              before ++ after.tail
+
   protected val cloneRow: Step.Id => Unit => IO[Endo[List[SequenceRow[D]]]] =
     stepId =>
       _ =>
