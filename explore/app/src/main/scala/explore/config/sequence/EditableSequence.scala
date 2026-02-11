@@ -72,8 +72,8 @@ object EditableSequence: // TODO Types?? Hide behind "InstrumentEditableSequence
     flamingos2.andThen(Flamingos2.science).some
 
   def fromLiveSequence(live: LiveSequence): Option[EditableSequence] =
-    live.data.toOption
-      .flatMap(_._2.map(_.config))
+    live.sequence.toOption
+      .flatMap(_.get.map(_.config))
       .collect: // TODO Double check if we really ignore futureSequence for acquisition for all instruments
         case InstrumentExecutionConfig.GmosNorth(execution)  =>
           EditableSequence.GmosNorth(

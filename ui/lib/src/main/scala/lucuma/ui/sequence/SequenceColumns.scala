@@ -41,12 +41,14 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
       header = "",
       cell = c =>
         React.Fragment(
-          Button(icon = SequenceIcons.Clone, onClick = handleRowEditAsync(c)(cloneRow)(().some))
-            .withMods(^.width := "20px")
-            .mini
-            .compact,
+          Button(
+            icon = SequenceIcons.Clone,
+            clazz = SequenceStyles.CloneButton,
+            onClick = handleRowEditAsync(c)(cloneRow)(().some)
+          ).mini.compact,
           Button(
             icon = SequenceIcons.Trash,
+            clazz = SequenceStyles.DeleteButton,
             onClick = handleRowEdit(c)(deleteRow)(().some)
           ).mini.compact
         )

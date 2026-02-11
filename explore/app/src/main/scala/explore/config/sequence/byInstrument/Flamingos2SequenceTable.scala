@@ -26,8 +26,7 @@ final case class Flamingos2SequenceTable(
   scienceSN:      Option[SignalToNoiseAt],
   isEditing:      IsEditing,
   modAcquisition: Endo[Atom[Flamingos2DynamicConfig]] => Callback,
-  modScience:     Endo[List[Atom[Flamingos2DynamicConfig]]] => Callback,
-  i:              Int // TODO This is a temporary mechanism for demo purposes
+  modScience:     Endo[List[Atom[Flamingos2DynamicConfig]]] => Callback
 ) extends ReactFnProps(Flamingos2SequenceTable.component)
     with SequenceTable[Flamingos2StaticConfig, Flamingos2DynamicConfig]
     with SpectroscopySequenceTable[Flamingos2DynamicConfig]

@@ -24,8 +24,7 @@ final case class GmosSouthSpectroscopySequenceTable(
   scienceSN:      Option[SignalToNoiseAt],
   isEditing:      IsEditing,
   modAcquisition: Endo[Atom[gmos.DynamicConfig.GmosSouth]] => Callback,
-  modScience:     Endo[List[Atom[gmos.DynamicConfig.GmosSouth]]] => Callback,
-  i:              Int // TODO This is a temporary mechanism for demo purposes
+  modScience:     Endo[List[Atom[gmos.DynamicConfig.GmosSouth]]] => Callback
 ) extends ReactFnProps(GmosSouthSpectroscopySequenceTable.component)
     with SequenceTable[gmos.StaticConfig.GmosSouth, gmos.DynamicConfig.GmosSouth]
     with SpectroscopySequenceTable[gmos.DynamicConfig.GmosSouth]

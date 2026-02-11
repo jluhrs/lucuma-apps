@@ -27,7 +27,8 @@ import scala.concurrent.duration.*
 object SequenceTileHelper:
 
   protected[sequence] case class LiveSequence(
-    data:       Pot[(Option[ExecutionVisits], Option[SequenceData])],
+    visits:     Pot[Option[ExecutionVisits]],
+    sequence:   Pot[View[Option[SequenceData]]],
     refreshing: Boolean
   )
 
@@ -76,6 +77,7 @@ object SequenceTileHelper:
           // catch the latter case.
           refreshSequence.value
     yield LiveSequence(
-      (visits.value.value, sequenceData.value.value).tupled,
+      visits.value,
+      sequenceData.state.value,
       visits.isRunning || sequenceData.isRunning
     )

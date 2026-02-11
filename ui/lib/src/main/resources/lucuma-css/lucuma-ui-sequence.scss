@@ -147,3 +147,18 @@ table tr {
     }
   }
 }
+
+.lucuma-sequence-clone-button {
+  background-color: transparent;
+  border: 0;
+  margin: 0;
+  padding-right: 0 !important;
+}
+
+.lucuma-sequence-delete-button {
+  background-color: transparent;
+  color: var(--negative-icon-color);
+  border: 0;
+  margin: 0;
+  padding-right: 0 !important;
+}

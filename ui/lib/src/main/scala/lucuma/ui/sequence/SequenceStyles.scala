@@ -29,6 +29,9 @@ object SequenceStyles:
 
   val CurrentHeader = Css("lucuma-sequence-current-header")
 
+  val CloneButton: Css  = Css("lucuma-sequence-clone-button")
+  val DeleteButton: Css = Css("lucuma-sequence-delete-button")
+
   object StepType:
     val Bias: Css   = Css("lucuma-sequence-step-type-bias")
     val Dark: Css   = Css("lucuma-sequence-step-type-dark")

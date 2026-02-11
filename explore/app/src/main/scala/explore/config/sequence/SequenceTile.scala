@@ -14,6 +14,7 @@ import explore.components.*
 import explore.components.HelpIcon
 import explore.components.ui.ExploreStyles
 import explore.config.sequence.byInstrument.*
+import explore.givens.given
 import explore.model.Execution
 import explore.model.ObsTabTileIds
 import explore.model.Observation
@@ -28,6 +29,7 @@ import lucuma.core.enums.CalibrationRole
 import lucuma.core.model.Target
 import lucuma.core.model.sequence.Atom
 import lucuma.core.model.sequence.ExecutionConfig
+import lucuma.core.model.sequence.ExecutionSequence
 import lucuma.core.model.sequence.InstrumentExecutionConfig
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
@@ -66,17 +68,17 @@ object SequenceTile
       import SequenceTileHelper.*
 
       for
-        i                <- useStateView(0) // TODO This is a temporary mechanism for demo purposes
         liveSequence     <- useLiveSequence(
                               props.obsId,
                               props.asterismIds.toList,
                               props.customSedTimestamps,
                               props.calibrationRole
                             )
-        _                <- useEffectWithDeps(liveSequence.data): dataPot =>
-                              props.sequenceChanged.set(dataPot.void)
+        _                <- useEffectWithDeps(liveSequence.visits, liveSequence.sequence.map(_.get)):
+                              (visitsPot, sequencePot) =>
+                                props.sequenceChanged.set((visitsPot, sequencePot).tupled.void)
         editableSequence <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
-        _                <- useEffect:      // Keep editable sequence in sync with live sequence when not editing
+        _                <- useEffect: // Keep editable sequence in sync with live sequence when not editing
                               editableSequence
                                 .set(EditableSequence.fromLiveSequence(liveSequence))
                                 .unless_(props.isEditing.get)
@@ -86,6 +88,75 @@ object SequenceTile
         val staleTooltip: Option[VdomNode] = execution.digest.staleTooltip
         val programTimeCharge: TimeSpan    = execution.programTimeCharge.value
         val executed: TagOf[HTMLElement]   = timeDisplay("Executed", programTimeCharge)
+
+        def replaceAcquisition[S, D](
+          editableOptional:        Optional[EditableSequence, Atom[D]],
+          executionConfigOptional: Optional[InstrumentExecutionConfig, ExecutionConfig[S, D]]
+        ): Endo[InstrumentExecutionConfig] =
+          editableSequence.get
+            .flatMap(editableOptional.getOption)
+            .foldMap: newAcq =>
+              executionConfigOptional
+                .andThen(ExecutionConfig.acquisition.some)
+                .andThen(ExecutionSequence.nextAtom)
+                .replace(newAcq)
+
+        val replaceAllAcquisitions: Endo[InstrumentExecutionConfig] =
+          replaceAcquisition(
+            EditableSequence.gmosNorthAcquisition,
+            InstrumentExecutionConfig.gmosNorth
+              .andThen(InstrumentExecutionConfig.GmosNorth.executionConfig)
+          ) >>>
+            replaceAcquisition(
+              EditableSequence.gmosSouthAcquisition,
+              InstrumentExecutionConfig.gmosSouth
+                .andThen(InstrumentExecutionConfig.GmosSouth.executionConfig)
+            ) >>>
+            replaceAcquisition(
+              EditableSequence.flamingos2Acquisition,
+              InstrumentExecutionConfig.flamingos2
+                .andThen(InstrumentExecutionConfig.Flamingos2.executionConfig)
+            )
+
+        def replaceScience[S, D](
+          editableOptional:        Optional[EditableSequence, List[Atom[D]]],
+          executionConfigOptional: Optional[InstrumentExecutionConfig, ExecutionConfig[S, D]]
+        ): Endo[InstrumentExecutionConfig] =
+          editableSequence.get
+            .flatMap(editableOptional.getOption)
+            .foldMap: newScience =>
+              executionConfigOptional
+                .andThen(ExecutionConfig.science.some)
+                .andThen(ExecutionSequence.nextAtom)
+                .replace(newScience.head) >>>
+                executionConfigOptional
+                  .andThen(ExecutionConfig.science.some)
+                  .andThen(ExecutionSequence.possibleFuture)
+                  .replace(newScience.tail)
+
+        val replaceAllScience: Endo[InstrumentExecutionConfig] =
+          replaceScience(
+            EditableSequence.gmosNorthScience,
+            InstrumentExecutionConfig.gmosNorth
+              .andThen(InstrumentExecutionConfig.GmosNorth.executionConfig)
+          ) >>>
+            replaceScience(
+              EditableSequence.gmosSouthScience,
+              InstrumentExecutionConfig.gmosSouth
+                .andThen(InstrumentExecutionConfig.GmosSouth.executionConfig)
+            ) >>>
+            replaceScience(
+              EditableSequence.flamingos2Science,
+              InstrumentExecutionConfig.flamingos2
+                .andThen(InstrumentExecutionConfig.Flamingos2.executionConfig)
+            )
+
+        val commitEdits: Callback = // TODO Invoke ODB with new sequence
+          liveSequence.sequence.toOption
+            .flatMap(_.toOptionView)
+            .map:
+              _.zoom(SequenceData.config).mod(replaceAllAcquisitions >>> replaceAllScience)
+            .orEmpty
 
         def resolveAcquisition[S, D](
           config:           ExecutionConfig[S, D],
@@ -156,7 +227,7 @@ object SequenceTile
                           severity = Button.Severity.Danger
                         ).mini.compact,
                         Button(
-                          onClick = props.isEditing.set(IsEditing.False) >> i.mod(_ + 1),
+                          onClick = props.isEditing.set(IsEditing.False) >> commitEdits,
                           label = "Accept",
                           icon = Icons.Checkmark,
                           tooltip = "Accept sequence modifications",
@@ -177,7 +248,7 @@ object SequenceTile
 
         val body =
           props.sequenceChanged.get
-            .flatMap(_ => liveSequence.data)
+            .flatMap(_ => (liveSequence.visits, liveSequence.sequence.map(_.get)).tupled)
             .renderPot(
               (visitsOpt, sequenceDataOpt) =>
                 // TODO Show visits even if sequence data is not available
@@ -206,8 +277,7 @@ object SequenceTile
                             scienceSn,
                             props.isEditing.get,
                             modAcquisition(EditableSequence.gmosNorthAcquisition),
-                            modScience(EditableSequence.gmosNorthScience),
-                            i.get
+                            modScience(EditableSequence.gmosNorthScience)
                           )
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
                           GmosNorthImagingSequenceTable(
@@ -218,8 +288,7 @@ object SequenceTile
                             snPerFilter,
                             props.isEditing.get,
                             modAcquisition(EditableSequence.gmosNorthAcquisition),
-                            modScience(EditableSequence.gmosNorthScience),
-                            i.get
+                            modScience(EditableSequence.gmosNorthScience)
                           )
                         case _                                                        => mismatchError
                     case SequenceData(InstrumentExecutionConfig.GmosSouth(config), signalToNoise) =>
@@ -240,8 +309,7 @@ object SequenceTile
                             scienceSn,
                             props.isEditing.get,
                             modAcquisition(EditableSequence.gmosSouthAcquisition),
-                            modScience(EditableSequence.gmosSouthScience),
-                            i.get
+                            modScience(EditableSequence.gmosSouthScience)
                           )
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
                           GmosSouthImagingSequenceTable(
@@ -252,8 +320,7 @@ object SequenceTile
                             snPerFilter,
                             props.isEditing.get,
                             modAcquisition(EditableSequence.gmosSouthAcquisition),
-                            modScience(EditableSequence.gmosSouthScience),
-                            i.get
+                            modScience(EditableSequence.gmosSouthScience)
                           )
                         case _                                                        => mismatchError
                     case SequenceData(
@@ -272,8 +339,7 @@ object SequenceTile
                         scienceSn,
                         props.isEditing.get,
                         modAcquisition(EditableSequence.flamingos2Acquisition),
-                        modScience(EditableSequence.flamingos2Science),
-                        i.get
+                        modScience(EditableSequence.flamingos2Science)
                       )
                     case _                                                                        => mismatchError
                   },

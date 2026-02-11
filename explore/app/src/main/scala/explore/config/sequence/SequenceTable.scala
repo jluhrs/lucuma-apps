@@ -24,7 +24,6 @@ private trait SequenceTable[S, D]:
   def isEditing: IsEditing
   def modAcquisition: Endo[Atom[D]] => Callback
   def modScience: Endo[List[Atom[D]]] => Callback
-  def i: Int // TODO This is a temporary mechanism for demo purposes
 
   private def futureSteps(
     seqType:        SequenceType,
