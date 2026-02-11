@@ -4,6 +4,7 @@
 package explore.config.sequence
 
 import cats.Endo
+import cats.effect.IO
 import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
@@ -13,6 +14,7 @@ import explore.*
 import explore.components.*
 import explore.components.HelpIcon
 import explore.components.ui.ExploreStyles
+import explore.components.undo.UndoButtons
 import explore.config.sequence.byInstrument.*
 import explore.givens.given
 import explore.model.Execution
@@ -21,6 +23,8 @@ import explore.model.Observation
 import explore.model.reusability.given
 import explore.model.syntax.all.*
 import explore.syntax.ui.*
+import explore.undo.UndoContext
+import explore.undo.UndoStacks
 import explore.utils.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.TagOf
@@ -82,12 +86,18 @@ object SequenceTile
                               editableSequence
                                 .set(EditableSequence.fromLiveSequence(liveSequence))
                                 .unless_(props.isEditing.get)
+        undoStacks       <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
+        _                <- useEffectWithDeps(props.isEditing.get.value): _ =>
+                              undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
       yield
         val execution: Execution           = props.obsExecution
         val staleCss: TagMod               = execution.digest.staleClass
         val staleTooltip: Option[VdomNode] = execution.digest.staleTooltip
         val programTimeCharge: TimeSpan    = execution.programTimeCharge.value
         val executed: TagOf[HTMLElement]   = timeDisplay("Executed", programTimeCharge)
+
+        val undoCtx: UndoContext[Option[EditableSequence]] =
+          UndoContext(undoStacks, editableSequence)
 
         def replaceAcquisition[S, D](
           editableOptional:        Optional[EditableSequence, Atom[D]],
@@ -175,12 +185,16 @@ object SequenceTile
         def modAcquisition[D](
           editableOptional: Optional[EditableSequence, Atom[D]]
         ): Endo[Atom[D]] => Callback =
-          editableSequence.zoom(Iso.id.some.andThen(editableOptional)).mod
+          undoCtx
+            .zoom(Iso.id.some.andThen(editableOptional))
+            .foldMap(_.mod)
 
         def modScience[D](
           editableOptional: Optional[EditableSequence, List[Atom[D]]]
         ): Endo[List[Atom[D]]] => Callback =
-          editableSequence.zoom(Iso.id.some.andThen(editableOptional)).mod
+          undoCtx
+            .zoom(Iso.id.some.andThen(editableOptional))
+            .foldMap(_.mod)
 
         val title =
           <.span(
@@ -198,7 +212,9 @@ object SequenceTile
                   timeDisplay("Planned", total, timeClass = staleCss, timeTooltip = staleTooltip)
 
                 <.span(ExploreStyles.SequenceTileTitle)(
-                  <.span(ExploreStyles.SequenceTileTitleSide),
+                  <.span(ExploreStyles.SequenceTileTitleSide, ExploreStyles.SequenceTileTitleUndo)(
+                    UndoButtons(undoCtx, size = PlSize.Mini).when(props.isEditing.get)
+                  ),
                   <.span(ExploreStyles.SequenceTileTitleSummary)(
                     HelpIcon("target/main/sequence-times.md".refined),
                     planned,

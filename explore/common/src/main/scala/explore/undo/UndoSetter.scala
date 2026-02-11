@@ -48,6 +48,12 @@ trait UndoSetter[M] { self =>
   )(v: A): DefaultS[Unit] =
     set(getter, setter, (_: M, a: A) => onSet(a))(v)
 
+  def set(onSet: M => DefaultA[Unit])(v: M): DefaultS[Unit] =
+    set(identity, m => _ => m, (m, _) => onSet(m))(v)
+
+  def set(v: M): DefaultS[Unit] =
+    set(identity, m => _ => m, _ => DefaultA.unit)(v)
+
   def mod[A](
     getter:    M => A,
     setter:    A => M => M,
@@ -76,6 +82,12 @@ trait UndoSetter[M] { self =>
     onSet:  A => DefaultA[Unit]
   )(f: A => A): DefaultS[Unit] =
     mod(getter, setter, (_: M, a: A) => onSet(a))(f)
+
+  def mod(onSet: M => DefaultA[Unit])(f: M => M): DefaultS[Unit] =
+    mod(identity, m => _ => m, (m, _) => onSet(m))(f)
+
+  def mod(f: M => M): DefaultS[Unit] =
+    mod(identity, m => _ => m, _ => DefaultA.unit)(f)
 
   def zoom[N](getN: M => N, modN: (N => N) => (M => M)): UndoSetter[N] =
     new UndoSetter[N] {
