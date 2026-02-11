@@ -15,7 +15,9 @@ import lucuma.ui.sequence.byInstrument.SpectroscopySequenceTable
 
 final case class GmosNorthSpectroscopySequenceTable(
   visits:       List[Visit.GmosNorth],
-  config:       ExecutionConfig.GmosNorth,
+  staticConfig: gmos.StaticConfig.GmosNorth,
+  acquisition:  Option[Atom[gmos.DynamicConfig.GmosNorth]],
+  science:      Option[List[Atom[gmos.DynamicConfig.GmosNorth]]],
   acquisitonSN: Option[SignalToNoiseAt],
   scienceSN:    Option[SignalToNoiseAt],
   isEditing:    IsEditing,

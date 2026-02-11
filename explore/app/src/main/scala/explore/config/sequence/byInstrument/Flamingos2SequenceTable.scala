@@ -17,7 +17,9 @@ import lucuma.ui.sequence.byInstrument.SpectroscopySequenceTable
 
 final case class Flamingos2SequenceTable(
   visits:       List[Visit.Flamingos2],
-  config:       ExecutionConfig.Flamingos2,
+  staticConfig: Flamingos2StaticConfig,
+  acquisition:  Option[Atom[Flamingos2DynamicConfig]],
+  science:      Option[List[Atom[Flamingos2DynamicConfig]]],
   acquisitonSN: Option[SignalToNoiseAt],
   scienceSN:    Option[SignalToNoiseAt],
   isEditing:    IsEditing,

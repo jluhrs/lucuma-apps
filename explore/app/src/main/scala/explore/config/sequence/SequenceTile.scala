@@ -41,6 +41,11 @@ import lucuma.ui.syntax.all.*
 import lucuma.ui.syntax.all.given
 
 import scala.collection.immutable.SortedSet
+import org.scalajs.dom.HTMLElement
+import lucuma.core.model.sequence.Atom
+import japgolly.scalajs.react.vdom.TagOf
+import lucuma.core.model.sequence.ExecutionConfig
+import monocle.Optional
 
 final case class SequenceTile(
   obsId:               Observation.Id,
@@ -51,7 +56,7 @@ final case class SequenceTile(
   sequenceChanged:     View[Pot[Unit]],
   isEditing:           View[IsEditing]
 ) extends Tile[SequenceTile](ObsTabTileIds.SequenceId.id, "Sequence", canMinimize = !isEditing.get)(
-      SequenceTile
+      SequenceTile // TODO Move isEditing state here, but we need to be able to change tile state from within tile
     )
 
 object SequenceTile
@@ -59,35 +64,54 @@ object SequenceTile
       import SequenceTileHelper.*
 
       for
-        i            <- useStateView(0) // TODO This is a temporary mechanism for demo purposes
-        liveSequence <- useLiveSequence(
-                          props.obsId,
-                          props.asterismIds.toList,
-                          props.customSedTimestamps,
-                          props.calibrationRole
-                        )
-        _            <- useEffectWithDeps(liveSequence.data): dataPot =>
-                          props.sequenceChanged.set(dataPot.void)
+        i                <- useStateView(0) // TODO This is a temporary mechanism for demo purposes
+        liveSequence     <- useLiveSequence(
+                              props.obsId,
+                              props.asterismIds.toList,
+                              props.customSedTimestamps,
+                              props.calibrationRole
+                            )
+        _                <- useEffectWithDeps(liveSequence.data): dataPot =>
+                              props.sequenceChanged.set(dataPot.void)
+        editableSequence <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
+        _                <- useEffect:      // Keep editable sequence in sync with live sequence when not editing
+                              editableSequence
+                                .set(EditableSequence.fromLiveSequence(liveSequence))
+                                .unless_(props.isEditing.get)
       yield
-        val execution         = props.obsExecution
-        val staleCss          = execution.digest.staleClass
-        val staleTooltip      = execution.digest.staleTooltip
-        val programTimeCharge = execution.programTimeCharge.value
+        val execution: Execution           = props.obsExecution
+        val staleCss: TagMod               = execution.digest.staleClass
+        val staleTooltip: Option[VdomNode] = execution.digest.staleTooltip
+        val programTimeCharge: TimeSpan    = execution.programTimeCharge.value
+        val executed: TagOf[HTMLElement]   = timeDisplay("Executed", programTimeCharge)
 
-        val executed = timeDisplay("Executed", programTimeCharge)
+        def resolveAcquisition[S, D](
+          config:           ExecutionConfig[S, D],
+          editableOptional: Optional[EditableSequence, Atom[D]]
+        ): Option[Atom[D]] = // For acquisition, we ignore possibleFuture
+          if props.isEditing.get then editableSequence.get.flatMap(editableOptional.getOption)
+          else config.acquisition.map(_.nextAtom)
+
+        def resolveScience[S, D](
+          config:           ExecutionConfig[S, D],
+          editableOptional: Optional[EditableSequence, List[Atom[D]]]
+        ): Option[List[Atom[D]]] =
+          if props.isEditing.get then editableSequence.get.flatMap(editableOptional.getOption)
+          else config.science.map(a => a.nextAtom +: a.possibleFuture)
 
         val title =
           <.span(
             execution.digest.programTimeEstimate.value
               .map: plannedTime =>
-                val total   = programTimeCharge +| plannedTime
-                val pending = timeDisplay(
-                  "Pending",
-                  plannedTime,
-                  timeClass = staleCss,
-                  timeTooltip = staleTooltip
-                )
-                val planned =
+                val total: TimeSpan             = programTimeCharge +| plannedTime
+                val pending: TagOf[HTMLElement] =
+                  timeDisplay(
+                    "Pending",
+                    plannedTime,
+                    timeClass = staleCss,
+                    timeTooltip = staleTooltip
+                  )
+                val planned: TagOf[HTMLElement] =
                   timeDisplay("Planned", total, timeClass = staleCss, timeTooltip = staleTooltip)
 
                 <.span(ExploreStyles.SequenceTileTitle)(
@@ -163,7 +187,9 @@ object SequenceTile
                         case ModeSignalToNoise.Spectroscopy(acquisitionSn, scienceSn) =>
                           GmosNorthSpectroscopySequenceTable(
                             visits,
-                            config,
+                            config.static,
+                            resolveAcquisition(config, EditableSequence.gmosNorthAcquisition),
+                            resolveScience(config, EditableSequence.gmosNorthScience),
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
@@ -172,7 +198,9 @@ object SequenceTile
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
                           GmosNorthImagingSequenceTable(
                             visits,
-                            config,
+                            config.static,
+                            resolveAcquisition(config, EditableSequence.gmosNorthAcquisition),
+                            resolveScience(config, EditableSequence.gmosNorthScience),
                             snPerFilter,
                             props.isEditing.get,
                             i.get
@@ -189,7 +217,9 @@ object SequenceTile
                         case ModeSignalToNoise.Spectroscopy(acquisitionSn, scienceSn) =>
                           GmosSouthSpectroscopySequenceTable(
                             visits,
-                            config,
+                            config.static,
+                            resolveAcquisition(config, EditableSequence.gmosSouthAcquisition),
+                            resolveScience(config, EditableSequence.gmosSouthScience),
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
@@ -198,7 +228,9 @@ object SequenceTile
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
                           GmosSouthImagingSequenceTable(
                             visits,
-                            config,
+                            config.static,
+                            resolveAcquisition(config, EditableSequence.gmosSouthAcquisition),
+                            resolveScience(config, EditableSequence.gmosSouthScience),
                             snPerFilter,
                             props.isEditing.get,
                             i.get
@@ -213,7 +245,9 @@ object SequenceTile
                           .collect:
                             case ExecutionVisits.Flamingos2(visits) => visits.toList
                           .orEmpty,
-                        config,
+                        config.static,
+                        resolveAcquisition(config, EditableSequence.flamingos2Acquisition),
+                        resolveScience(config, EditableSequence.flamingos2Science),
                         acquisitionSn,
                         scienceSn,
                         props.isEditing.get,
