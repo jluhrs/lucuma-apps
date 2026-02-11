@@ -148,17 +148,23 @@ table tr {
   }
 }
 
-.lucuma-sequence-clone-button {
-  background-color: transparent;
-  border: 0;
-  margin: 0;
-  padding-right: 0 !important;
-}
+.lucuma-sequence-edit-controls-cell {
+  width: 100%;
+  display: inline-block;
+  text-align: left;
 
-.lucuma-sequence-delete-button {
-  background-color: transparent;
-  color: var(--negative-icon-color);
-  border: 0;
-  margin: 0;
-  padding-right: 0 !important;
+  .lucuma-sequence-clone-button {
+    background-color: transparent;
+    border: 0;
+    margin: 0;
+    padding-right: 0 !important;
+  }
+
+  .lucuma-sequence-delete-button {
+    background-color: transparent;
+    color: var(--negative-icon-color);
+    border: 0;
+    margin: 0;
+    padding-right: 0 !important;
+  }
 }

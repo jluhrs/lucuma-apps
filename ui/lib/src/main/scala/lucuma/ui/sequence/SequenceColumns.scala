@@ -14,6 +14,7 @@ import lucuma.core.util.TimeSpan
 import lucuma.react.common.*
 import lucuma.react.primereact.Button
 import lucuma.react.primereact.InputNumber
+import lucuma.react.primereact.TooltipOptions
 import lucuma.react.syntax.*
 import lucuma.react.table.*
 import lucuma.ui.format.formatSN
@@ -30,27 +31,32 @@ import SequenceRowFormatters.*
 // `CM` is the type of the column meta.
 // `TF` is the type of the global filter.
 class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM, TF](
-  colDef:   ColumnDef.Applied[Expandable[HeaderOrRow[T]], TM, CM, TF],
-  getStep:  T => Option[R],
-  getIndex: T => Option[StepIndex]
-) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStep):
-  private lazy val editControlsCol: colDef.TypeFor[Option[Unit]] =
+  colDef:          ColumnDef.Applied[Expandable[HeaderOrRow[T]], TM, CM, TF],
+  getStepFromRow:  T => Option[R],
+  getIndexFromRow: T => Option[StepIndex]
+) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStepFromRow):
+  private lazy val editControlsCol: colDef.TypeFor[Boolean] =
     colDef(
       SequenceColumns.EditControlsColumnId,
-      _.value.toOption.as(()),
+      _.getStep.map(_.isFinished).getOrElse(true),
       header = "",
       cell = c =>
-        React.Fragment(
+        val isFinished: Boolean = c.value
+        <.span(SequenceStyles.EditControlsCell)(
           Button(
             icon = SequenceIcons.Clone,
             clazz = SequenceStyles.CloneButton,
-            onClick = handleRowEditAsync(c)(cloneRow)(().some)
+            onClick = c.getStep.foldMap(step => handleAllSeqTypesRowEditAsync(c)(cloneRow(step))),
+            tooltip = "Clone Step",
+            tooltipOptions = TooltipOptions.Top
           ).mini.compact,
           Button(
             icon = SequenceIcons.Trash,
             clazz = SequenceStyles.DeleteButton,
-            onClick = handleRowEdit(c)(deleteRow)(().some)
-          ).mini.compact
+            onClick = c.getFutureStep.foldMap(step => handleRowEdit(c)(deleteRow(step.stepId))),
+            tooltip = "Remove Step",
+            tooltipOptions = TooltipOptions.Top
+          ).mini.compact.unless(isFinished)
         )
     )
 
@@ -58,7 +64,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
     colDef(
       SequenceColumns.IndexAndTypeColumnId,
       _.value.toOption
-        .map(row => (getIndex(row), getStep(row).flatMap(_.stepTypeDisplay)))
+        .map(row => (getIndexFromRow(row), getStepFromRow(row).flatMap(_.stepTypeDisplay)))
         .getOrElse((none, none)),
       header = "Step",
       cell = c =>
@@ -71,19 +77,20 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val exposureCol: colDef.TypeFor[Option[TimeSpan]] =
     colDef(
       SequenceColumns.ExposureColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.exposureTime)),
+      _.getStep.flatMap(_.exposureTime),
       header = _ => "Exp (sec)",
       cell = c =>
-        val isEditing: Boolean = c.table.options.meta.exists(_.isEditing.value)
-        (c.value, c.row.original.value.toOption.flatMap(getStep).flatMap(_.instrument))
+        val isEditing: Boolean  = c.table.options.meta.exists(_.isEditing.value)
+        val isFinished: Boolean = c.getStep.forall(_.isFinished)
+        (c.value, c.getStep.flatMap(_.instrument))
           .mapN[VdomNode]: (v, i) =>
-            if isEditing then
+            if isEditing && !isFinished then
               React.Fragment(
                 InputNumber( // TODO Decimals according to instrument
                   id = s"exposure-${c.row.index}",
                   value = v.toSeconds.toDouble,
                   onValueChange = e =>
-                    handleRowEdit(c)(exposureReplace):
+                    handleRowValueEdit(c)(exposureReplace): // TODO Can we do this better than cast?
                       TimeSpan.fromSeconds(e.value.get.asInstanceOf[Double].toLong)
                   ,
                   clazz = SequenceStyles.SequenceInput
@@ -95,7 +102,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val guideStateCol: colDef.TypeFor[Option[Boolean]] =
     colDef(
       SequenceColumns.GuideColumnId,
-      _.value.toOption.flatMap(row => getStep(row).map(_.hasGuiding)),
+      _.getStep.map(_.hasGuiding),
       header = "",
       cell = _.value
         .filter(identity) // Only render on Some(true)
@@ -105,7 +112,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val pOffsetCol: colDef.TypeFor[Option[Offset.P]] =
     colDef(
       SequenceColumns.PColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.offset.map(_.p))),
+      _.getStep.flatMap(_.offset.map(_.p)),
       header = _ => "p",
       cell = _.value.map(FormatOffsetP(_).value).orEmpty
     )
@@ -113,7 +120,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val qOffsetCol: colDef.TypeFor[Option[Offset.Q]] =
     colDef(
       SequenceColumns.QColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.offset.map(_.q))),
+      _.getStep.flatMap(_.offset.map(_.q)),
       header = _ => "q",
       cell = _.value.map(FormatOffsetQ(_).value).orEmpty
     )
@@ -121,7 +128,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val wavelengthCol: colDef.TypeFor[Option[Wavelength]] =
     colDef(
       SequenceColumns.WavelengthColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.wavelength)),
+      _.getStep.flatMap(_.wavelength),
       header = _ => "λ (nm)",
       cell = _.value.map(FormatWavelength(_).value).getOrElse("-")
     )
@@ -129,7 +136,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val fpuCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.FPUColumnId,
-      _.value.toOption.map(row => getStep(row).flatMap(_.fpuName).getOrElse("None")),
+      _.getStep.flatMap(_.fpuName),
       header = _ => "FPU",
       cell = _.value.orEmpty
     )
@@ -137,7 +144,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val gratingCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.GratingColumnId,
-      _.value.toOption.map(row => getStep(row).flatMap(_.gratingName).getOrElse("None")),
+      _.getStep.flatMap(_.gratingName),
       header = "Grating",
       cell = _.value.orEmpty
     )
@@ -145,7 +152,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val filterCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.FilterColumnId,
-      _.value.toOption.map(row => getStep(row).flatMap(_.filterName).getOrElse("None")),
+      _.getStep.flatMap(_.filterName),
       header = "Filter",
       cell = _.value.orEmpty
     )
@@ -153,7 +160,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val xBinCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.XBinColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.readoutXBin)),
+      _.getStep.flatMap(_.readoutXBin),
       header = _ => "Xbin",
       cell = _.value.orEmpty
     )
@@ -161,7 +168,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val yBinCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.YBinColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.readoutYBin)),
+      _.getStep.flatMap(_.readoutYBin),
       header = _ => "Ybin",
       cell = _.value.orEmpty
     )
@@ -169,13 +176,13 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val roiCol: colDef.TypeFor[Option[String]] =
     colDef(
       SequenceColumns.ROIColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.roi)),
+      _.getStep.flatMap(_.roi),
       header = "ROI",
       cell = _.value.orEmpty
     )
   colDef(
     SequenceColumns.ROIColumnId,
-    _.value.toOption.flatMap(row => getStep(row).flatMap(_.roi)),
+    _.getStep.flatMap(_.roi),
     header = "ROI",
     cell = _.value.orEmpty
   )
@@ -183,7 +190,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val snCol: colDef.TypeFor[Option[SignalToNoise]] =
     colDef(
       SequenceColumns.SNColumnId,
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.signalToNoise)),
+      _.getStep.flatMap(_.signalToNoise),
       header = "S/N",
       cell = _.value.map(formatSN).orEmpty
     )
@@ -191,7 +198,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   private lazy val readModeCol: colDef.TypeFor[Option[String]] =
     colDef(
       ColumnId("readMode"),
-      _.value.toOption.flatMap(row => getStep(row).flatMap(_.readMode)),
+      _.getStep.flatMap(_.readMode),
       header = "Read Mode",
       cell = _.value.orEmpty
     )

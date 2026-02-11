@@ -222,5 +222,9 @@ object SequenceRow:
     case (a: Executed.ExecutedStep[D], b: Executed.ExecutedStep[D])   => a === b
     case _                                                            => false
 
-  def futureStep[D]: Prism[SequenceRow[D], FutureStep[D]] =
+  def futureStep[D]: Prism[SequenceRow[D], FutureStep[D]]                =
     GenPrism[SequenceRow[D], FutureStep[D]]
+  def executedVisit[D]: Prism[SequenceRow[D], Executed.ExecutedVisit[D]] =
+    GenPrism[SequenceRow[D], Executed.ExecutedVisit[D]]
+  def executedStep[D]: Prism[SequenceRow[D], Executed.ExecutedStep[D]]   =
+    GenPrism[SequenceRow[D], Executed.ExecutedStep[D]]

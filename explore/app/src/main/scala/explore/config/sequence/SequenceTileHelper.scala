@@ -27,10 +27,13 @@ import scala.concurrent.duration.*
 object SequenceTileHelper:
 
   protected[sequence] case class LiveSequence(
-    visits:     Pot[Option[ExecutionVisits]],
-    sequence:   Pot[View[Option[SequenceData]]],
+    visits:     Reusable[Pot[Option[ExecutionVisits]]],
+    sequence:   Reusable[Pot[View[Option[SequenceData]]]],
     refreshing: Boolean
   )
+
+  protected object LiveSequence:
+    given Reusability[LiveSequence] = Reusability.by(x => (x.visits, x.sequence, x.refreshing))
 
   protected[sequence] def useLiveSequence(
     obsId:               Observation.Id,
@@ -78,6 +81,6 @@ object SequenceTileHelper:
           refreshSequence.value
     yield LiveSequence(
       visits.value,
-      sequenceData.state.value,
+      sequenceData.state,
       visits.isRunning || sequenceData.isRunning
     )

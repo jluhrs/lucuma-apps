@@ -8,7 +8,6 @@ import cats.effect.IO
 import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
-import crystal.react.given
 import crystal.react.hooks.*
 import explore.*
 import explore.components.*
@@ -20,7 +19,6 @@ import explore.givens.given
 import explore.model.Execution
 import explore.model.ObsTabTileIds
 import explore.model.Observation
-import explore.model.reusability.given
 import explore.model.syntax.all.*
 import explore.syntax.ui.*
 import explore.undo.UndoContext
@@ -78,14 +76,15 @@ object SequenceTile
                               props.customSedTimestamps,
                               props.calibrationRole
                             )
-        _                <- useEffectWithDeps(liveSequence.visits, liveSequence.sequence.map(_.get)):
-                              (visitsPot, sequencePot) =>
-                                props.sequenceChanged.set((visitsPot, sequencePot).tupled.void)
+        _                <-
+          useEffectWithDeps(liveSequence.visits, liveSequence.sequence): (visitsPot, sequencePot) =>
+            props.sequenceChanged.set((visitsPot.value, sequencePot.value.map(_.get)).tupled.void)
         editableSequence <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
-        _                <- useEffect: // Keep editable sequence in sync with live sequence when not editing
-                              editableSequence
-                                .set(EditableSequence.fromLiveSequence(liveSequence))
-                                .unless_(props.isEditing.get)
+        _                <-
+          useEffectWithDeps(liveSequence): newLiveSequence =>
+            editableSequence // Keep editable sequence in sync with live sequence when not editing
+              .set(EditableSequence.fromLiveSequence(newLiveSequence))
+              .unless_(props.isEditing.get)
         undoStacks       <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
         _                <- useEffectWithDeps(props.isEditing.get.value): _ =>
                               undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
@@ -182,16 +181,9 @@ object SequenceTile
           if props.isEditing.get then editableSequence.get.flatMap(editableOptional.getOption)
           else config.science.map(a => a.nextAtom +: a.possibleFuture)
 
-        def modAcquisition[D](
-          editableOptional: Optional[EditableSequence, Atom[D]]
-        ): Endo[Atom[D]] => Callback =
-          undoCtx
-            .zoom(Iso.id.some.andThen(editableOptional))
-            .foldMap(_.mod)
-
-        def modScience[D](
-          editableOptional: Optional[EditableSequence, List[Atom[D]]]
-        ): Endo[List[Atom[D]]] => Callback =
+        def modSequence[D](
+          editableOptional: Optional[EditableSequence, D]
+        ): Endo[D] => Callback =
           undoCtx
             .zoom(Iso.id.some.andThen(editableOptional))
             .foldMap(_.mod)
@@ -264,7 +256,8 @@ object SequenceTile
 
         val body =
           props.sequenceChanged.get
-            .flatMap(_ => (liveSequence.visits, liveSequence.sequence.map(_.get)).tupled)
+            .flatMap: _ =>
+              (liveSequence.visits.value, liveSequence.sequence.value.map(_.get)).tupled
             .renderPot(
               (visitsOpt, sequenceDataOpt) =>
                 // TODO Show visits even if sequence data is not available
@@ -292,8 +285,8 @@ object SequenceTile
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
-                            modAcquisition(EditableSequence.gmosNorthAcquisition),
-                            modScience(EditableSequence.gmosNorthScience)
+                            modSequence(EditableSequence.gmosNorthAcquisition),
+                            modSequence(EditableSequence.gmosNorthScience)
                           )
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
                           GmosNorthImagingSequenceTable(
@@ -303,8 +296,8 @@ object SequenceTile
                             resolveScience(config, EditableSequence.gmosNorthScience),
                             snPerFilter,
                             props.isEditing.get,
-                            modAcquisition(EditableSequence.gmosNorthAcquisition),
-                            modScience(EditableSequence.gmosNorthScience)
+                            modSequence(EditableSequence.gmosNorthAcquisition),
+                            modSequence(EditableSequence.gmosNorthScience)
                           )
                         case _                                                        => mismatchError
                     case SequenceData(InstrumentExecutionConfig.GmosSouth(config), signalToNoise) =>
@@ -324,8 +317,8 @@ object SequenceTile
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
-                            modAcquisition(EditableSequence.gmosSouthAcquisition),
-                            modScience(EditableSequence.gmosSouthScience)
+                            modSequence(EditableSequence.gmosSouthAcquisition),
+                            modSequence(EditableSequence.gmosSouthScience)
                           )
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
                           GmosSouthImagingSequenceTable(
@@ -335,8 +328,8 @@ object SequenceTile
                             resolveScience(config, EditableSequence.gmosSouthScience),
                             snPerFilter,
                             props.isEditing.get,
-                            modAcquisition(EditableSequence.gmosSouthAcquisition),
-                            modScience(EditableSequence.gmosSouthScience)
+                            modSequence(EditableSequence.gmosSouthAcquisition),
+                            modSequence(EditableSequence.gmosSouthScience)
                           )
                         case _                                                        => mismatchError
                     case SequenceData(
@@ -354,8 +347,8 @@ object SequenceTile
                         acquisitionSn,
                         scienceSn,
                         props.isEditing.get,
-                        modAcquisition(EditableSequence.flamingos2Acquisition),
-                        modScience(EditableSequence.flamingos2Science)
+                        modSequence(EditableSequence.flamingos2Acquisition),
+                        modSequence(EditableSequence.flamingos2Science)
                       )
                     case _                                                                        => mismatchError
                   },

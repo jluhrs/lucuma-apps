@@ -9,19 +9,24 @@ import cats.effect.IO
 import cats.syntax.all.*
 import crystal.react.syntax.effect.*
 import japgolly.scalajs.react.*
+import lucuma.core.enums.Breakpoint
+import lucuma.core.enums.ObserveClass
+import lucuma.core.enums.SequenceType
 import lucuma.core.model.sequence.Atom
 import lucuma.core.model.sequence.Step
+import lucuma.core.model.sequence.StepEstimate
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.gmos
 import lucuma.core.util.TimeSpan
 import lucuma.react.table.*
 import lucuma.ui.table.*
+import monocle.Iso
 import monocle.Optional
 import monocle.Prism
 import monocle.Traversal
 
 trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM, TF](
-  getStep: T => Option[R]
+  getStepFromRow: T => Option[R]
 ):
   private val gmosDynamicConfig: Prism[D, gmos.DynamicConfig] =
     Prism[D, gmos.DynamicConfig] {
@@ -65,37 +70,54 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
   private def modifyStep[A](apply: A => Endo[Step[D]])(stepId: Step.Id)(a: A): Endo[List[Atom[D]]] =
     atomsTraversal.andThen(Atom.steps).andThen(selectStep(stepId)).modify(apply(a))
 
-  private type CellContextType[A] =
-    CellContext[Expandable[HeaderOrRow[T]], Option[A], TM, ?, TF, ?, ?]
+  protected type CellContextType[A] =
+    CellContext[Expandable[HeaderOrRow[T]], A, TM, ?, TF, ?, ?]
 
-  private def getFutureStep[A](c: CellContextType[A]): Option[SequenceRow.FutureStep[D]] =
-    c.row.original.value
-      .map(getStep)
-      .toOption
-      .flatMap:
-        _.collect:
-          case SequenceRow.futureStep(fs) => fs
+  extension (row: Expandable[HeaderOrRow[T]])
+    protected def getStep: Option[R] =
+      row.value.toOption.flatMap(row => getStepFromRow(row))
 
-  protected def handleRowEditAsync[A, B](
-    c: CellContextType[A]
-  )(rowEdit: Step.Id => B => IO[Endo[List[Atom[D]]]])(value: Option[B]): Callback =
-    (c.table.options.meta, getFutureStep(c), value).tupled
-      .foldMap: (meta, futureStep, v) =>
-        rowEdit(futureStep.stepId)(v)
-          .flatMap: mod =>
-            meta.seqTypeMod(futureStep.seqType)(mod).toAsync
-          .runAsyncAndForget
+  extension [A](cellContext: CellContextType[A])
+    protected def getStep: Option[R] =
+      cellContext.row.original.getStep
 
-  protected def handleRowEdit[A, B](
+    protected def getFutureStep: Option[SequenceRow.FutureStep[D]] =
+      cellContext.getStep.collect:
+        case SequenceRow.futureStep(fs) => fs
+
+  protected def handleSeqTypeRowEditAsync[A](
+    c:       CellContextType[A],
+    seqType: SequenceType
+  )(rowEdit: IO[Endo[List[Atom[D]]]]): Callback =
+    c.table.options.meta.foldMap: meta =>
+      rowEdit
+        .flatMap: mod =>
+          meta.seqTypeMod(seqType)(mod).toAsync
+        .runAsyncAndForget
+
+  protected def handleAllSeqTypesRowEditAsync[A](c: CellContextType[A])(
+    rowEdit: IO[Endo[List[Atom[D]]]]
+  ): Callback =
+    handleSeqTypeRowEditAsync(c, SequenceType.Acquisition)(rowEdit) >>
+      handleSeqTypeRowEditAsync(c, SequenceType.Science)(rowEdit)
+
+  protected def handleSeqTypeRowEdit[A](c: CellContextType[A], seqType: SequenceType)(
+    rowEdit: Endo[List[Atom[D]]]
+  ): Callback =
+    c.table.options.meta.foldMap(_.seqTypeMod(seqType)(rowEdit))
+
+  protected def handleRowEdit[A](c: CellContextType[A])(rowEdit: Endo[List[Atom[D]]]): Callback =
+    c.getFutureStep.foldMap: futureStep =>
+      handleSeqTypeRowEdit(c, futureStep.seqType)(rowEdit)
+
+  protected def handleRowValueEdit[A, B](
     c: CellContextType[A]
   )(rowEdit: Step.Id => B => Endo[List[Atom[D]]])(value: Option[B]): Callback =
-    (c.table.options.meta, getFutureStep(c), value).tupled
-      .foldMap: (meta, futureStep, v) =>
-        meta.seqTypeMod(futureStep.seqType)(rowEdit(futureStep.stepId)(v))
+    (c.getFutureStep, value).tupled.foldMap: (futureStep, v) =>
+      handleSeqTypeRowEdit(c, futureStep.seqType)(rowEdit(futureStep.stepId)(v))
 
   // Follow this template for other fields
-  protected val exposureReplace
-    : Step.Id => TimeSpan => Endo[List[Atom[D]]] = // TODO Atom, with traverse
+  protected val exposureReplace: Step.Id => TimeSpan => Endo[List[Atom[D]]] =
     modifyStep:
       combineOptionalsReplace(
         gmosNorth.andThen(gmos.DynamicConfig.GmosNorth.exposure),
@@ -104,31 +126,56 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
       )
 
   // Also deletes empty atoms.
-  protected val deleteRow: Step.Id => Unit => Endo[List[Atom[D]]] =
+  protected val deleteRow: Step.Id => Endo[List[Atom[D]]] =
     stepId =>
-      _ =>
-        _.map: atom =>
-          val steps: List[Step[D]]                    = atom.steps.toList
-          val newSteps: Option[NonEmptyList[Step[D]]] =
-            NonEmptyList.fromList:
-              steps.zipWithIndex
-                .collectFirst { case (step, idx) if step.id === stepId => idx }
-                .fold(steps): idx =>
-                  val (before, after) = steps.splitAt(idx)
-                  before ++ after.tail
-          newSteps.map(ns => Atom.steps.replace(ns)(atom))
-        .flattenOption
+      _.map: atom =>
+        val steps: List[Step[D]]                    = atom.steps.toList
+        val newSteps: Option[NonEmptyList[Step[D]]] =
+          NonEmptyList.fromList:
+            steps.zipWithIndex
+              .collectFirst { case (step, idx) if step.id === stepId => idx }
+              .fold(steps): idx =>
+                val (before, after) = steps.splitAt(idx)
+                before ++ after.tail
+        newSteps.map(ns => Atom.steps.replace(ns)(atom))
+      .flattenOption
 
-  protected val cloneRow: Step.Id => Unit => IO[Endo[List[Atom[D]]]] =
-    stepId =>
-      _ =>
-        IO.randomUUID.map: newId =>
-          atomsTraversal
-            .andThen(Atom.steps)
-            .modify: steps =>
-              steps.zipWithIndex
-                .collectFirst { case (step, idx) if step.id === stepId => (step, idx) }
-                .fold(steps): (step, idx) =>
-                  val newStep: Step[D] = Step.id.replace(Step.Id.fromUuid(newId))(step)
-                  val (before, after)  = steps.toList.splitAt(idx + 1)
-                  NonEmptyList.fromListUnsafe(before ++ (newStep :: after))
+  protected def cloneRow(row: SequenceRow[D]): IO[Endo[List[Atom[D]]]] =
+    IO.randomUUID
+      .map(Step.Id.fromUuid(_))
+      .map: newId =>
+        row match
+          case SequenceRow.futureStep(fs)   =>
+            atomsTraversal
+              .andThen(Atom.steps)
+              .modify: steps =>
+                steps.zipWithIndex
+                  .collectFirst { case (step, idx) if step.id === fs.stepId => (step, idx) }
+                  .fold(steps): (step, idx) =>
+                    val newStep: Step[D] = Step.id.replace(newId)(step)
+                    val (before, after)  = steps.toList.splitAt(idx + 1)
+                    NonEmptyList.fromListUnsafe(before ++ (newStep :: after))
+          case SequenceRow.executedStep(es) =>
+            val newStep: Step[D] = Step(
+              newId,
+              es.stepRecord.instrumentConfig,
+              es.stepRecord.stepConfig,
+              es.stepRecord.telescopeConfig,
+              // TODO IS THIS WHAT WE ACTUALLY WANT?? // es.interval.foldMap(_.timeSpan),
+              StepEstimate.fromMax(List.empty, List.empty),
+              es.stepRecord.observeClass,
+              Breakpoint.Disabled
+            )
+            Iso
+              .id[List[Atom[D]]]
+              .modify:
+                // Sequence is complete, we must create a new atom to hold the cloned step?
+                case Nil          => Nil
+                case head :: tail =>
+                  val newHead: Atom[D] =
+                    if head.observeClass === newStep.observeClass || // Calibration steps go to Science sequence
+                      (head.observeClass === ObserveClass.Science && newStep.observeClass.isCalibration)
+                    then Atom.steps[D].modify(newStep :: _)(head)
+                    else head
+                  newHead :: tail
+          case _                            => identity
