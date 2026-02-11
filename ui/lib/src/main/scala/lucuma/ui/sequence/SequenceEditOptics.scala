@@ -4,10 +4,12 @@
 package lucuma.ui.sequence
 
 import cats.Endo
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.syntax.all.*
 import crystal.react.syntax.effect.*
 import japgolly.scalajs.react.*
+import lucuma.core.model.sequence.Atom
 import lucuma.core.model.sequence.Step
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.gmos
@@ -21,11 +23,6 @@ import monocle.Traversal
 trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM, TF](
   getStep: T => Option[R]
 ):
-  private val dynamicConfig: Optional[SequenceRow[D], D] = SequenceRow
-    .futureStep[D]
-    .andThen(SequenceRow.FutureStep.step)
-    .andThen(Step.instrumentConfig)
-
   private val gmosDynamicConfig: Prism[D, gmos.DynamicConfig] =
     Prism[D, gmos.DynamicConfig] {
       case g: gmos.DynamicConfig => Some(g)
@@ -44,28 +41,29 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
       case _                           => None
     }(_.asInstanceOf[D])
 
-  private val gmosNorth: Optional[SequenceRow[D], gmos.DynamicConfig.GmosNorth] =
-    dynamicConfig.andThen(gmosNorthDynamicConfig)
+  private val gmosNorth: Optional[Step[D], gmos.DynamicConfig.GmosNorth] =
+    Step.instrumentConfig.andThen(gmosNorthDynamicConfig)
 
-  private val gmosSouth: Optional[SequenceRow[D], gmos.DynamicConfig.GmosSouth] =
-    dynamicConfig.andThen(gmosSouthDynamicConfig)
+  private val gmosSouth: Optional[Step[D], gmos.DynamicConfig.GmosSouth] =
+    Step.instrumentConfig.andThen(gmosSouthDynamicConfig)
 
-  private val flamingos2: Optional[SequenceRow[D], Flamingos2DynamicConfig] =
-    dynamicConfig.andThen(flamingos2DyamicConfig)
+  private val flamingos2: Optional[Step[D], Flamingos2DynamicConfig] =
+    Step.instrumentConfig.andThen(flamingos2DyamicConfig)
 
   private def combineOptionalsReplace[S, A](optionals: Optional[S, A]*)(a: A): S => S =
     Function.chain(optionals.map(_.replace(a)))
 
-  private val sequenceTraversal: Traversal[List[SequenceRow[D]], SequenceRow[D]] =
-    Traversal.fromTraverse[List, SequenceRow[D]]
+  private val atomsTraversal: Traversal[List[Atom[D]], Atom[D]] =
+    Traversal.fromTraverse[List, Atom[D]]
 
-  private def selectRow(stepId: Step.Id): Traversal[List[SequenceRow[D]], SequenceRow[D]] =
-    sequenceTraversal.filter(_.id === stepId.asRight)
+  private val stepsTraversal: Traversal[NonEmptyList[Step[D]], Step[D]] =
+    Traversal.fromTraverse[NonEmptyList, Step[D]]
 
-  private def modifyRow[A](apply: A => Endo[SequenceRow[D]])(stepId: Step.Id)(
-    a: A
-  ): Endo[List[SequenceRow[D]]] =
-    selectRow(stepId).modify(apply(a))
+  private def selectStep(stepId: Step.Id): Traversal[NonEmptyList[Step[D]], Step[D]] =
+    stepsTraversal.filter(_.id === stepId)
+
+  private def modifyStep[A](apply: A => Endo[Step[D]])(stepId: Step.Id)(a: A): Endo[List[Atom[D]]] =
+    atomsTraversal.andThen(Atom.steps).andThen(selectStep(stepId)).modify(apply(a))
 
   private type CellContextType[A] =
     CellContext[Expandable[HeaderOrRow[T]], Option[A], TM, ?, TF, ?, ?]
@@ -80,7 +78,7 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
 
   protected def handleRowEditAsync[A, B](
     c: CellContextType[A]
-  )(rowEdit: Step.Id => B => IO[Endo[List[SequenceRow[D]]]])(value: Option[B]): Callback =
+  )(rowEdit: Step.Id => B => IO[Endo[List[Atom[D]]]])(value: Option[B]): Callback =
     (c.table.options.meta, getFutureStep(c), value).tupled
       .foldMap: (meta, futureStep, v) =>
         rowEdit(futureStep.stepId)(v)
@@ -90,42 +88,47 @@ trait SequenceEditOptics[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], 
 
   protected def handleRowEdit[A, B](
     c: CellContextType[A]
-  )(rowEdit: Step.Id => B => Endo[List[SequenceRow[D]]])(value: Option[B]): Callback =
+  )(rowEdit: Step.Id => B => Endo[List[Atom[D]]])(value: Option[B]): Callback =
     (c.table.options.meta, getFutureStep(c), value).tupled
       .foldMap: (meta, futureStep, v) =>
         meta.seqTypeMod(futureStep.seqType)(rowEdit(futureStep.stepId)(v))
 
   // Follow this template for other fields
-  protected val exposureReplace: Step.Id => TimeSpan => Endo[List[SequenceRow[D]]] =
-    modifyRow:
+  protected val exposureReplace
+    : Step.Id => TimeSpan => Endo[List[Atom[D]]] = // TODO Atom, with traverse
+    modifyStep:
       combineOptionalsReplace(
         gmosNorth.andThen(gmos.DynamicConfig.GmosNorth.exposure),
         gmosSouth.andThen(gmos.DynamicConfig.GmosSouth.exposure),
         flamingos2.andThen(Flamingos2DynamicConfig.exposure)
       )
 
-  protected val deleteRow: Step.Id => Unit => Endo[List[SequenceRow[D]]] =
+  // Also deletes empty atoms.
+  protected val deleteRow: Step.Id => Unit => Endo[List[Atom[D]]] =
     stepId =>
       _ =>
-        rows =>
-          rows.zipWithIndex
-            .collectFirst:
-              case (SequenceRow.futureStep(fs), idx) if fs.stepId === stepId => idx
-            .fold(rows): idx =>
-              val (before, after) = rows.splitAt(idx)
-              before ++ after.tail
+        _.map: atom =>
+          val steps: List[Step[D]]                    = atom.steps.toList
+          val newSteps: Option[NonEmptyList[Step[D]]] =
+            NonEmptyList.fromList:
+              steps.zipWithIndex
+                .collectFirst { case (step, idx) if step.id === stepId => idx }
+                .fold(steps): idx =>
+                  val (before, after) = steps.splitAt(idx)
+                  before ++ after.tail
+          newSteps.map(ns => Atom.steps.replace(ns)(atom))
+        .flattenOption
 
-  protected val cloneRow: Step.Id => Unit => IO[Endo[List[SequenceRow[D]]]] =
+  protected val cloneRow: Step.Id => Unit => IO[Endo[List[Atom[D]]]] =
     stepId =>
       _ =>
         IO.randomUUID.map: newId =>
-          rows =>
-            rows.zipWithIndex
-              .collectFirst:
-                case (SequenceRow.futureStep(fs), idx) if fs.stepId === stepId => (fs, idx)
-              .foldMap: (fs, idx) =>
-                val rowToClone      = SequenceRow.FutureStep.step
-                  .andThen(Step.id)
-                  .replace(Step.Id(newId))(fs)
-                val (before, after) = rows.splitAt(idx + 1)
-                before ++ (rowToClone :: after)
+          atomsTraversal
+            .andThen(Atom.steps)
+            .modify: steps =>
+              steps.zipWithIndex
+                .collectFirst { case (step, idx) if step.id === stepId => (step, idx) }
+                .fold(steps): (step, idx) =>
+                  val newStep: Step[D] = Step.id.replace(Step.Id.fromUuid(newId))(step)
+                  val (before, after)  = steps.toList.splitAt(idx + 1)
+                  NonEmptyList.fromListUnsafe(before ++ (newStep :: after))

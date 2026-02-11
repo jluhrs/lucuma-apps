@@ -3,7 +3,9 @@
 
 package explore.config.sequence
 
+import cats.Endo
 import cats.syntax.all.*
+import japgolly.scalajs.react.callback.Callback
 import lucuma.core.enums.SequenceType
 import lucuma.core.math.SignalToNoise
 import lucuma.core.model.sequence.*
@@ -20,6 +22,8 @@ private trait SequenceTable[S, D]:
   def science: Option[List[Atom[D]]]
   def signalToNoise: SequenceType => D => Option[SignalToNoise]
   def isEditing: IsEditing
+  def modAcquisition: Endo[Atom[D]] => Callback
+  def modScience: Endo[List[Atom[D]]] => Callback
   def i: Int // TODO This is a temporary mechanism for demo purposes
 
   private def futureSteps(

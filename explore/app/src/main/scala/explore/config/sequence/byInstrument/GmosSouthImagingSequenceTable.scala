@@ -3,8 +3,10 @@
 
 package explore.config.sequence.byInstrument
 
+import cats.Endo
 import explore.config.sequence.SequenceTable
 import explore.config.sequence.SequenceTableBuilder
+import japgolly.scalajs.react.callback.Callback
 import lucuma.core.enums.Instrument
 import lucuma.core.model.sequence.*
 import lucuma.itc.SignalToNoiseAt
@@ -15,13 +17,15 @@ import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.byInstrument.ImagingSequenceTable
 
 final case class GmosSouthImagingSequenceTable(
-  visits:       List[Visit.GmosSouth],
-  staticConfig: gmos.StaticConfig.GmosSouth,
-  acquisition:  Option[Atom[gmos.DynamicConfig.GmosSouth]],
-  science:      Option[List[Atom[gmos.DynamicConfig.GmosSouth]]],
-  snPerFilter:  Map[GmosSouthFilter, SignalToNoiseAt],
-  isEditing:    IsEditing = IsEditing.False,
-  i:            Int // TODO This is a temporary mechanism for demo purposes
+  visits:         List[Visit.GmosSouth],
+  staticConfig:   gmos.StaticConfig.GmosSouth,
+  acquisition:    Option[Atom[gmos.DynamicConfig.GmosSouth]],
+  science:        Option[List[Atom[gmos.DynamicConfig.GmosSouth]]],
+  snPerFilter:    Map[GmosSouthFilter, SignalToNoiseAt],
+  isEditing:      IsEditing = IsEditing.False,
+  modAcquisition: Endo[Atom[gmos.DynamicConfig.GmosSouth]] => Callback,
+  modScience:     Endo[List[Atom[gmos.DynamicConfig.GmosSouth]]] => Callback,
+  i:              Int // TODO This is a temporary mechanism for demo purposes
 ) extends ReactFnProps(GmosSouthImagingSequenceTable.component)
     with SequenceTable[gmos.StaticConfig.GmosSouth, gmos.DynamicConfig.GmosSouth]
     with ImagingSequenceTable[gmos.DynamicConfig.GmosSouth, GmosSouthFilter]:

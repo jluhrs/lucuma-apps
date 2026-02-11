@@ -6,13 +6,15 @@ package lucuma.ui.sequence
 import cats.Endo
 import japgolly.scalajs.react.Callback
 import lucuma.core.enums.SequenceType
+import lucuma.core.model.sequence.Atom
 
 trait SequenceTableMeta[D]:
   def isEditing: IsEditing
-  def modAcquisition: Endo[List[SequenceRow[D]]] => Callback
-  def modScience: Endo[List[SequenceRow[D]]] => Callback
+  def modAcquisition: Endo[Atom[D]] => Callback
+  def modScience: Endo[List[Atom[D]]] => Callback
 
-  def seqTypeMod(seqType: SequenceType): Endo[List[SequenceRow[D]]] => Callback =
+  def seqTypeMod(seqType: SequenceType): Endo[List[Atom[D]]] => Callback =
     seqType match
-      case SequenceType.Acquisition => modAcquisition
+      case SequenceType.Acquisition =>
+        modAtomList => modAcquisition(atom => modAtomList(List(atom)).head)
       case SequenceType.Science     => modScience

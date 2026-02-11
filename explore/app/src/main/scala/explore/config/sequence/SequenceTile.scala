@@ -3,6 +3,7 @@
 
 package explore.config.sequence
 
+import cats.Endo
 import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
@@ -21,9 +22,12 @@ import explore.model.syntax.all.*
 import explore.syntax.ui.*
 import explore.utils.*
 import japgolly.scalajs.react.*
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.CalibrationRole
 import lucuma.core.model.Target
+import lucuma.core.model.sequence.Atom
+import lucuma.core.model.sequence.ExecutionConfig
 import lucuma.core.model.sequence.InstrumentExecutionConfig
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
@@ -39,13 +43,11 @@ import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.SequenceData
 import lucuma.ui.syntax.all.*
 import lucuma.ui.syntax.all.given
+import monocle.Iso
+import monocle.Optional
+import org.scalajs.dom.HTMLElement
 
 import scala.collection.immutable.SortedSet
-import org.scalajs.dom.HTMLElement
-import lucuma.core.model.sequence.Atom
-import japgolly.scalajs.react.vdom.TagOf
-import lucuma.core.model.sequence.ExecutionConfig
-import monocle.Optional
 
 final case class SequenceTile(
   obsId:               Observation.Id,
@@ -98,6 +100,16 @@ object SequenceTile
         ): Option[List[Atom[D]]] =
           if props.isEditing.get then editableSequence.get.flatMap(editableOptional.getOption)
           else config.science.map(a => a.nextAtom +: a.possibleFuture)
+
+        def modAcquisition[D](
+          editableOptional: Optional[EditableSequence, Atom[D]]
+        ): Endo[Atom[D]] => Callback =
+          editableSequence.zoom(Iso.id.some.andThen(editableOptional)).mod
+
+        def modScience[D](
+          editableOptional: Optional[EditableSequence, List[Atom[D]]]
+        ): Endo[List[Atom[D]]] => Callback =
+          editableSequence.zoom(Iso.id.some.andThen(editableOptional)).mod
 
         val title =
           <.span(
@@ -193,6 +205,8 @@ object SequenceTile
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
+                            modAcquisition(EditableSequence.gmosNorthAcquisition),
+                            modScience(EditableSequence.gmosNorthScience),
                             i.get
                           )
                         case ModeSignalToNoise.GmosNorthImaging(snPerFilter)          =>
@@ -203,6 +217,8 @@ object SequenceTile
                             resolveScience(config, EditableSequence.gmosNorthScience),
                             snPerFilter,
                             props.isEditing.get,
+                            modAcquisition(EditableSequence.gmosNorthAcquisition),
+                            modScience(EditableSequence.gmosNorthScience),
                             i.get
                           )
                         case _                                                        => mismatchError
@@ -223,6 +239,8 @@ object SequenceTile
                             acquisitionSn,
                             scienceSn,
                             props.isEditing.get,
+                            modAcquisition(EditableSequence.gmosSouthAcquisition),
+                            modScience(EditableSequence.gmosSouthScience),
                             i.get
                           )
                         case ModeSignalToNoise.GmosSouthImaging(snPerFilter)          =>
@@ -233,6 +251,8 @@ object SequenceTile
                             resolveScience(config, EditableSequence.gmosSouthScience),
                             snPerFilter,
                             props.isEditing.get,
+                            modAcquisition(EditableSequence.gmosSouthAcquisition),
+                            modScience(EditableSequence.gmosSouthScience),
                             i.get
                           )
                         case _                                                        => mismatchError
@@ -251,6 +271,8 @@ object SequenceTile
                         acquisitionSn,
                         scienceSn,
                         props.isEditing.get,
+                        modAcquisition(EditableSequence.flamingos2Acquisition),
+                        modScience(EditableSequence.flamingos2Science),
                         i.get
                       )
                     case _                                                                        => mismatchError

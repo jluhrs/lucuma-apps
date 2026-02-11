@@ -45,8 +45,9 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
             .withMods(^.width := "20px")
             .mini
             .compact,
-          Button(icon = SequenceIcons.Trash,
-                 onClick = handleRowEdit(c)(deleteRow)(().some)
+          Button(
+            icon = SequenceIcons.Trash,
+            onClick = handleRowEdit(c)(deleteRow)(().some)
           ).mini.compact
         )
     )

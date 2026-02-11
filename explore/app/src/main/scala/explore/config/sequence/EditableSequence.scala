@@ -4,16 +4,15 @@
 package explore.config.sequence
 
 import explore.*
-import lucuma.core.model.sequence.InstrumentExecutionConfig
-
 import lucuma.core.model.sequence.Atom
+import lucuma.core.model.sequence.InstrumentExecutionConfig
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
 import lucuma.core.model.sequence.gmos
-import monocle.macros.GenPrism
-import monocle.Prism
-import monocle.Lens
 import monocle.Focus
+import monocle.Lens
 import monocle.Optional
+import monocle.Prism
+import monocle.macros.GenPrism
 
 enum EditableSequence:
   case GmosNorth(
