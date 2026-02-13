@@ -160,14 +160,14 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                 val step: SequenceRow[D] = stepRow.step
                 TagMod(
                   step match
-                    case SequenceRow.Executed.ExecutedStep(step, _)                    =>
+                    case SequenceRow.Executed.ExecutedStep(step, _)                       =>
                       SequenceStyles.RowHasExtra |+|
                         ExploreStyles.SequenceRowDone.unless_(
                           step.executionState == StepExecutionState.Ongoing
                         )
-                    case SequenceRow.FutureStep(_, _, firstOf, _) if firstOf.isDefined =>
+                    case SequenceRow.FutureStep(_, _, firstOf, _, _) if firstOf.isDefined =>
                       ExploreStyles.SequenceRowFirstInAtom
-                    case _                                                             => TagMod.empty,
+                    case _                                                                => TagMod.empty,
                   if (LinkingInfo.developmentMode)
                     step.id.toOption.map(^.title := _.toString).whenDefined
                   else TagMod.empty

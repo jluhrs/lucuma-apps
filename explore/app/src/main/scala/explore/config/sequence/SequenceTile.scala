@@ -70,24 +70,27 @@ object SequenceTile
       import SequenceTileHelper.*
 
       for
-        liveSequence     <- useLiveSequence(
-                              props.obsId,
-                              props.asterismIds.toList,
-                              props.customSedTimestamps,
-                              props.calibrationRole
-                            )
-        _                <-
+        liveSequence              <- useLiveSequence(
+                                       props.obsId,
+                                       props.asterismIds.toList,
+                                       props.customSedTimestamps,
+                                       props.calibrationRole
+                                     )
+        _                         <-
           useEffectWithDeps(liveSequence.visits, liveSequence.sequence): (visitsPot, sequencePot) =>
             props.sequenceChanged.set((visitsPot.value, sequencePot.value.map(_.get)).tupled.void)
-        editableSequence <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
-        _                <-
+        editableSequence          <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
+        resetEditableSequenceFrom <-
+          useCallback: (newLiveSequence: LiveSequence) =>
+            editableSequence.set(EditableSequence.fromLiveSequence(newLiveSequence))
+        _                         <-
           useEffectWithDeps(liveSequence): newLiveSequence =>
-            editableSequence // Keep editable sequence in sync with live sequence when not editing
-              .set(EditableSequence.fromLiveSequence(newLiveSequence))
+            // Keep editable sequence in sync with live sequence when not editing
+            resetEditableSequenceFrom(newLiveSequence)
               .unless_(props.isEditing.get)
-        undoStacks       <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
-        _                <- useEffectWithDeps(props.isEditing.get.value): _ =>
-                              undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
+        undoStacks                <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
+        _                         <- useEffectWithDeps(props.isEditing.get.value): _ =>
+                                       undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
       yield
         val execution: Execution           = props.obsExecution
         val staleCss: TagMod               = execution.digest.staleClass
@@ -223,11 +226,13 @@ object SequenceTile
                       icon = Icons.Pencil,
                       tooltip = "Enter sequence editing mode",
                       tooltipOptions = TooltipOptions.Top
-                    ).mini.compact.when(!props.isEditing.get && sizeState.isMaximized),
+                    ).mini.compact
+                      .when(!props.isEditing.get && sizeState.isMaximized && liveSequence.isReady),
                     React
                       .Fragment(
                         Button(
-                          onClick = props.isEditing.set(IsEditing.False),
+                          onClick = props.isEditing.set(IsEditing.False) >>
+                            resetEditableSequenceFrom(liveSequence),
                           label = "Cancel",
                           icon = Icons.Close,
                           tooltip = "Cancel sequence editing",

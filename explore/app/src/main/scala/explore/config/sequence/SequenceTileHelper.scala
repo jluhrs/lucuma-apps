@@ -30,7 +30,8 @@ object SequenceTileHelper:
     visits:     Reusable[Pot[Option[ExecutionVisits]]],
     sequence:   Reusable[Pot[View[Option[SequenceData]]]],
     refreshing: Boolean
-  )
+  ):
+    val isReady: Boolean = visits.isReady && sequence.isReady
 
   protected object LiveSequence:
     given Reusability[LiveSequence] = Reusability.by(x => (x.visits, x.sequence, x.refreshing))
