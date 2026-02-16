@@ -88,11 +88,11 @@ object TargetSelectionTable:
         tableMod = ExploreStyles.ExploreTable,
         headerCellMod = headerCell =>
           columnClasses.get(headerCell.column.id).orEmpty |+| ExploreStyles.StickyHeader,
-        rowMod = row =>
+        rowMod = rowTagMod: row =>
           TagMod(
             ExploreStyles.TableRowSelected.when_(props.selectedIndex.contains_(row.index.toInt)),
             ^.onClick --> props.onClick(row.original, row.index.toInt)
           ),
-        cellMod = cell => columnClasses.get(cell.column.id).orEmpty
+        cellMod = cellTagMod(cell => columnClasses.get(cell.column.id).orEmpty)
       )
     )

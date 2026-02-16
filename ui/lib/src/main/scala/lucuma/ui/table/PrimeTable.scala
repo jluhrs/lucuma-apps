@@ -5,6 +5,7 @@ package lucuma.ui.table
 
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.react.SizePx
@@ -16,7 +17,7 @@ import org.scalajs.dom.HTMLElement
 
 import scalajs.js
 
-trait PrimeTableProps[T, TM, CM, TF] extends HTMLTableProps[T, TM, CM, TF]:
+trait PrimeTableProps[T, TM, CM, TF, RC] extends HTMLTableProps[T, TM, CM, TF, RC]:
   def hoverableRows: Boolean
   def striped: Boolean
   def celled: Boolean
@@ -32,7 +33,7 @@ trait PrimeTableProps[T, TM, CM, TF] extends HTMLTableProps[T, TM, CM, TF]:
           case Compact      => Css("pl-compact"))
         .orEmpty
 
-case class PrimeTable[T, TM, CM, TF](
+case class PrimeTable[T, TM, CM, TF, RC](
   table:                Table[T, TM, CM, TF],
   hoverableRows:        Boolean = true,
   striped:              Boolean = false,
@@ -47,9 +48,10 @@ case class PrimeTable[T, TM, CM, TF](
   columnFilterRenderer: Column[T, Any, TM, CM, TF, Any, Any] => VdomNode =
     (_: Column[T, Any, TM, CM, TF, Any, Any]) => EmptyVdom,
   bodyMod:              TagMod = TagMod.empty,
-  rowMod:               Row[T, TM, CM, TF] => TagMod = (_: Row[T, TM, CM, TF]) => TagMod.empty,
-  cellMod:              Cell[T, Any, TM, CM, TF, Any, Any] => TagMod = (_: Cell[T, Any, TM, CM, TF, Any, Any]) =>
-    TagMod.empty,
+  rowMod:               (Row[T, TM, CM, TF], Option[RC] => TagOf[HTMLElement]) => VdomNode =
+    (_: Row[T, TM, CM, TF], render: Option[RC] => TagOf[HTMLElement]) => render(None),
+  cellMod:              (Cell[T, Any, TM, CM, TF, Any, Any], Option[RC], TagOf[HTMLElement]) => VdomNode =
+    (_: Cell[T, Any, TM, CM, TF, Any, Any], _: Option[RC], render) => render,
   footerMod:            TagMod = TagMod.empty,
   footerRowMod:         HeaderGroup[T, TM, CM, TF] => TagMod = (_: HeaderGroup[T, TM, CM, TF]) =>
     TagMod.empty,
@@ -57,9 +59,9 @@ case class PrimeTable[T, TM, CM, TF](
     (_: Header[T, Any, TM, CM, TF, Any, Any]) => TagMod.empty,
   emptyMessage:         VdomNode = EmptyVdom
 ) extends ReactFnProps(PrimeTable.component)
-    with PrimeTableProps[T, TM, CM, TF]
+    with PrimeTableProps[T, TM, CM, TF, RC]
 
-case class PrimeVirtualizedTable[T, TM, CM, TF](
+case class PrimeVirtualizedTable[T, TM, CM, TF, RC](
   table:                Table[T, TM, CM, TF],
   estimateSize:         Int => SizePx,
   // Table options
@@ -78,9 +80,10 @@ case class PrimeVirtualizedTable[T, TM, CM, TF](
   columnFilterRenderer: Column[T, Any, TM, CM, TF, Any, Any] => VdomNode =
     (_: Column[T, Any, TM, CM, TF, Any, Any]) => EmptyVdom,
   bodyMod:              TagMod = TagMod.empty,
-  rowMod:               Row[T, TM, CM, TF] => TagMod = (_: Row[T, TM, CM, TF]) => TagMod.empty,
-  cellMod:              Cell[T, Any, TM, CM, TF, Any, Any] => TagMod = (_: Cell[T, Any, TM, CM, TF, Any, Any]) =>
-    TagMod.empty,
+  rowMod:               (Row[T, TM, CM, TF], Option[RC] => TagOf[HTMLElement]) => VdomNode =
+    (_: Row[T, TM, CM, TF], render: Option[RC] => TagOf[HTMLElement]) => render(None),
+  cellMod:              (Cell[T, Any, TM, CM, TF, Any, Any], Option[RC], TagOf[HTMLElement]) => VdomNode =
+    (_: Cell[T, Any, TM, CM, TF, Any, Any], _: Option[RC], render) => render,
   footerMod:            TagMod = TagMod.empty,
   footerRowMod:         HeaderGroup[T, TM, CM, TF] => TagMod = (_: HeaderGroup[T, TM, CM, TF]) =>
     TagMod.empty,
@@ -94,10 +97,10 @@ case class PrimeVirtualizedTable[T, TM, CM, TF](
   virtualizerRef:       js.UndefOr[NonEmptyRef.Simple[Option[HTMLTableVirtualizer]]] = js.undefined,
   debugVirtualizer:     js.UndefOr[Boolean] = js.undefined
 ) extends ReactFnProps(PrimeVirtualizedTable.component)
-    with HTMLVirtualizedTableProps[T, TM, CM, TF]
-    with PrimeTableProps[T, TM, CM, TF]
+    with HTMLVirtualizedTableProps[T, TM, CM, TF, RC]
+    with PrimeTableProps[T, TM, CM, TF, RC]
 
-case class PrimeAutoHeightVirtualizedTable[T, TM, CM, TF](
+case class PrimeAutoHeightVirtualizedTable[T, TM, CM, TF, RC](
   table:                Table[T, TM, CM, TF],
   estimateSize:         Int => SizePx,
   // Table options
@@ -117,9 +120,10 @@ case class PrimeAutoHeightVirtualizedTable[T, TM, CM, TF](
   columnFilterRenderer: Column[T, Any, TM, CM, TF, Any, Any] => VdomNode =
     (_: Column[T, Any, TM, CM, TF, Any, Any]) => EmptyVdom,
   bodyMod:              TagMod = TagMod.empty,
-  rowMod:               Row[T, TM, CM, TF] => TagMod = (_: Row[T, TM, CM, TF]) => TagMod.empty,
-  cellMod:              Cell[T, Any, TM, CM, TF, Any, Any] => TagMod = (_: Cell[T, Any, TM, CM, TF, Any, Any]) =>
-    TagMod.empty,
+  rowMod:               (Row[T, TM, CM, TF], Option[RC] => TagOf[HTMLElement]) => VdomNode =
+    (_: Row[T, TM, CM, TF], render: Option[RC] => TagOf[HTMLElement]) => render(None),
+  cellMod:              (Cell[T, Any, TM, CM, TF, Any, Any], Option[RC], TagOf[HTMLElement]) => VdomNode =
+    (_: Cell[T, Any, TM, CM, TF, Any, Any], _: Option[RC], render) => render,
   footerMod:            TagMod = TagMod.empty,
   footerRowMod:         HeaderGroup[T, TM, CM, TF] => TagMod = (_: HeaderGroup[T, TM, CM, TF]) =>
     TagMod.empty,
@@ -133,11 +137,11 @@ case class PrimeAutoHeightVirtualizedTable[T, TM, CM, TF](
   virtualizerRef:       js.UndefOr[NonEmptyRef.Simple[Option[HTMLTableVirtualizer]]] = js.undefined,
   debugVirtualizer:     js.UndefOr[Boolean] = js.undefined
 ) extends ReactFnProps(PrimeAutoHeightVirtualizedTable.component)
-    with HTMLAutoHeightVirtualizedTableProps[T, TM, CM, TF]
-    with PrimeTableProps[T, TM, CM, TF]
+    with HTMLAutoHeightVirtualizedTableProps[T, TM, CM, TF, RC]
+    with PrimeTableProps[T, TM, CM, TF, RC]
 
-private val baseHTMLRenderer: HTMLTableRenderer[Any, Any, Any, Any] =
-  new HTMLTableRenderer[Any, Any, Any, Any]:
+private val baseHTMLRenderer: HTMLTableRenderer[Any, Any, Any, Any, Any] =
+  new HTMLTableRenderer[Any, Any, Any, Any, Any]:
     // Responsive-scroll means "unstackable". We are forcing this in all tables.
     // If we ever want a table that stacks on small devices, we can turn this into a parameter.
     override protected val TableClass: Css   = Css(
@@ -166,17 +170,24 @@ private val baseHTMLRenderer: HTMLTableRenderer[Any, Any, Any, Any] =
 
 object PrimeTable:
   private val component =
-    HTMLTableRenderer.componentBuilder[Any, Any, Any, Any, PrimeTable](baseHTMLRenderer)
+    HTMLTableRenderer.componentBuilder[Any, Any, Any, Any, Any, PrimeTable](baseHTMLRenderer)
 
 object PrimeVirtualizedTable:
   private val component =
-    HTMLTableRenderer.componentBuilderVirtualized[Any, Any, Any, Any, PrimeVirtualizedTable](
+    HTMLTableRenderer.componentBuilderVirtualized[Any, Any, Any, Any, Any, PrimeVirtualizedTable](
       baseHTMLRenderer
     )
 
 object PrimeAutoHeightVirtualizedTable:
   private val component =
     HTMLTableRenderer
-      .componentBuilderAutoHeightVirtualized[Any, Any, Any, Any, PrimeAutoHeightVirtualizedTable](
+      .componentBuilderAutoHeightVirtualized[
+        Any,
+        Any,
+        Any,
+        Any,
+        Any,
+        PrimeAutoHeightVirtualizedTable
+      ](
         baseHTMLRenderer
       )

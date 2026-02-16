@@ -4,8 +4,8 @@
 package explore.targeteditor.spectralDefinition
 
 import lucuma.core.enums.StellarLibrarySpectrum
-import lucuma.schemas.ObservationDB.Types.UnnormalizedSedInput
 import lucuma.core.model.UnnormalizedSED
+import lucuma.schemas.ObservationDB.Types.UnnormalizedSedInput
 import lucuma.schemas.odb.input.*
 
 private def initialUnnormalizedSedInput(sed: Option[UnnormalizedSED]): UnnormalizedSedInput =

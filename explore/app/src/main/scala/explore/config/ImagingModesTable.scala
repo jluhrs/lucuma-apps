@@ -405,7 +405,7 @@ object ImagingModesTable extends ModesTableCommon:
             striped = true,
             compact = Compact.Very,
             containerMod = ^.overflow.auto,
-            rowMod = row =>
+            rowMod = rowTagMod: row =>
               TagMod(
                 ^.disabled := !row.original.entry.enabled,
                 ExploreStyles.TableRowSelected.when:

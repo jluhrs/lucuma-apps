@@ -131,7 +131,7 @@ object FinderChartLinker extends ObsAttachmentUtils with FinderChartsAttachmentU
             tableMod =
               ExploreStyles.FinderChartsTable |+| ExploreStyles.ExploreSelectableTable |+| ExploreStyles.ExploreTable |+| ExploreStyles.FinderChartsTableDisabled
                 .unless_(action.get === Action.None),
-            rowMod = row =>
+            rowMod = rowTagMod: row =>
               TagMod(
                 ExploreStyles.TableRowSelected.when_(row.getIsSelected()),
                 ^.onClick ==> { e =>

@@ -222,14 +222,15 @@ object SchedulingWindowsTile
                   headerMod = ExploreStyles.TimingWindowsHeader,
                   tableMod =
                     ExploreStyles.ExploreTable |+| ExploreStyles.ExploreSelectableTable |+| ExploreStyles.TimingWindowsTable,
-                  rowMod = row =>
+                  rowMod = rowTagMod: row =>
                     TagMod(
                       ExploreStyles.TableRowSelected.when_(row.getIsSelected()),
                       ^.onClick --> (table.toggleAllRowsSelected(false) >> row.toggleSelected())
                     ),
-                  cellMod = _.column.id match
-                    case DeleteColId => ^.textAlign.right
-                    case _           => TagMod.empty
+                  cellMod = cellTagMod:
+                    _.column.id match
+                      case DeleteColId => ^.textAlign.right
+                      case _           => TagMod.empty
                   ,
                   // If cmd is pressed add to the selection
                   emptyMessage =

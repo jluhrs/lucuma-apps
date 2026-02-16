@@ -77,9 +77,10 @@ object LogArea
         containerRef = resizer.ref,
         tableMod = ObserveStyles.LogTable,
         headerMod = ^.display.none,
-        rowMod = _.original.level match
-          case ObserveLogLevel.Warning => ObserveStyles.LogWarningRow
-          case ObserveLogLevel.Error   => ObserveStyles.LogErrorRow
-          case _                       => TagMod.empty
+        rowMod = rowTagMod:
+          _.original.level match
+            case ObserveLogLevel.Warning => ObserveStyles.LogWarningRow
+            case ObserveLogLevel.Error   => ObserveStyles.LogErrorRow
+            case _                       => TagMod.empty
       )
     )

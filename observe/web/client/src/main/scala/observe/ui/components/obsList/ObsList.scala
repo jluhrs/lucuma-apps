@@ -241,7 +241,7 @@ object ObsList
           estimateSize = _ => 30.toPx,
           tableMod = ObserveStyles.ObserveTable |+| ObserveStyles.ObsListTable,
           columnFilterRenderer = FilterMethod.render,
-          rowMod = row =>
+          rowMod = rowTagMod: row =>
             TagMod(
               rowClass(
                 props.fullyLoadedObss.get(row.original.obsId),
@@ -255,7 +255,7 @@ object ObsList
                     props.obsIsProcessing(row.original.obsId)
                 )
             ),
-          cellMod = cell =>
+          cellMod = cellTagMod: cell =>
             cell.column.id match
               case StatusIconColumnId => ObserveStyles.LoadButtonCell
               case _                  => TagMod.empty

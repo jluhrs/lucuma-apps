@@ -171,7 +171,7 @@ object ProgramConfigRequestsTile:
         containerRef = resizer.ref,
         tableMod = ExploreStyles.ExploreTable |+| ExploreStyles.ExploreSelectableTable,
         hoverableRows = rows.nonEmpty,
-        rowMod = row =>
+        rowMod = rowTagMod: row =>
           TagMod(
             ExploreStyles.TableRowSelected.when(row.getIsSelected()),
             ^.onClick ==> table

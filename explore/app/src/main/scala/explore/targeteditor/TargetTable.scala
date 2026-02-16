@@ -231,12 +231,12 @@ object TargetTable:
                 ColumnClasses
                   .get(headerCell.column.id)
                   .orEmpty |+| ExploreStyles.StickyHeader,
-              rowMod = row =>
+              rowMod = rowTagMod: row =>
                 TagMod(
                   ExploreStyles.TableRowSelected
                     .when_(props.selectedTarget.get.exists(_ === row.original.id)),
                   ^.onClick --> props.selectedTarget.set(row.original.id.some)
                 ),
-              cellMod = cell => ColumnClasses.get(cell.column.id).orEmpty
+              cellMod = cellTagMod(cell => ColumnClasses.get(cell.column.id).orEmpty)
             )
           )

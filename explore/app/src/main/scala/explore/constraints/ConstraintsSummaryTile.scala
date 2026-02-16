@@ -254,7 +254,7 @@ object ConstraintsSummaryTile
               ColumnClasses
                 .get(headerCell.column.id)
                 .orEmpty |+| ExploreStyles.StickyHeader,
-            cellMod = cell => ColumnClasses.get(cell.column.id).orEmpty
+            cellMod = cellTagMod(cell => ColumnClasses.get(cell.column.id).orEmpty)
           )
         )
     )

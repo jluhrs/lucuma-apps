@@ -213,7 +213,7 @@ object ObsSummaryTile
           tableMod =
             ExploreStyles.ExploreTable |+| ExploreStyles.ObservationsSummaryTable |+| ExploreStyles.ExploreSelectableTable,
           headerCellMod = _ => ExploreStyles.StickyHeader,
-          rowMod = row =>
+          rowMod = rowTagMod: row =>
             TagMod(
               ExploreStyles.TableRowSelected
                 .when(row.getIsSelected() && (row.subRows.isEmpty || !row.getIsExpanded())),

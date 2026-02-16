@@ -315,14 +315,14 @@ object TargetSummaryTile
             ColumnClasses
               .get(headerCell.column.id)
               .orEmpty |+| ExploreStyles.StickyHeader,
-          rowMod = row =>
+          rowMod = rowTagMod: row =>
             TagMod(
               ExploreStyles.TableRowSelected.when_(
                 row.getIsSelected() || props.focusedTargetId.exists(_.toString === row.id.value)
               ),
               ^.onClick ==> table.getMultiRowSelectedHandler(row.id)
             ),
-          cellMod = cell => ColumnClasses.get(cell.column.id).orEmpty,
+          cellMod = cellTagMod(cell => ColumnClasses.get(cell.column.id).orEmpty),
           virtualizerRef = virtualizerRef,
           emptyMessage = <.div(Constants.NoTargets)
           // workaround to redraw when files are imported

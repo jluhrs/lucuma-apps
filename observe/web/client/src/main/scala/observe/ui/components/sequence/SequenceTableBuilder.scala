@@ -348,8 +348,8 @@ private trait SequenceTableBuilder[S, D: Eq](protected val instrument: Instrumen
             containerRef = resize.ref,
             virtualizerRef = virtualizerRef,
             tableMod = TagMod(tableStyle),
-            rowMod = row => computeRowMods(row.original),
+            rowMod = rowTagMod(row => computeRowMods(row.original)),
             headerCellMod = computeHeaderCellMods,
-            cellMod = computeCellMods
+            cellMod = cellTagMod(computeCellMods)
           )
         )
