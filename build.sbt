@@ -732,7 +732,7 @@ lazy val observe_deploy = project
     // https://stackoverflow.com/questions/79639270/docker-heroku-error-from-registry-unsupported for the solution
     logLevel                 := Level.Debug,
     dockerBuildxPlatforms    := Seq("linux/amd64"),
-    dockerBuildOptions ++= Seq("--provenance", "false"),
+    dockerBuildOptions ++= Seq("--provenance", "false", "--output", "type=docker"),
     // "--build-arg=BUILDKIT_INLINE_CACHE=1"
     // ),
     // END HEROKU DOCKER TEST
