@@ -478,7 +478,8 @@ object TargetEditor:
                 props.guideStarSelection,
                 props.blindOffsetInfo,
                 props.obsAndTargets.model.zoom(ObservationsAndTargets.targets),
-                props.isStaffOrAdmin
+                props.isStaffOrAdmin,
+                props.readonly
               )
             ),
             <.div(LucumaPrimeStyles.FormColumnVeryCompact, ExploreStyles.TargetForm)(
