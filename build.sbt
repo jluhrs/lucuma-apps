@@ -726,16 +726,6 @@ lazy val observe_deploy = project
     // Main class for launching
     Compile / mainClass  := Some("observe.web.server.http4s.WebServerLauncher"),
     dockerExposedPorts ++= Seq(9090, 9091), // Must match deployed app.conf web-server.port
-    // BEGIN HEROKU DOCKER TEST - IF SUCCESSFUL, MOVE TO SBT-LUCUMA
-    // Even though we use a single platform, we use the multiplatform mechanismo to force the use of buildx and be able to specify the provenance parameter, needed to create a manifest compatible with Heroku.
-    // See https://devcenter.heroku.com/articles/container-registry-and-runtime#known-issues-and-limitations and
-    // https://stackoverflow.com/questions/79639270/docker-heroku-error-from-registry-unsupported for the solution
-    logLevel                 := Level.Debug,
-    // dockerBuildxPlatforms    := Seq("linux/amd64"),
-    dockerBuildOptions ++= Seq("--provenance", "false", "--output", "type=docker"),
-    // "--build-arg=BUILDKIT_INLINE_CACHE=1"
-    // ),
-    // END HEROKU DOCKER TEST
     // Name of the launch script
     executableScriptName     := "observe-server",
     // Specify a different name for the config file
@@ -1158,7 +1148,6 @@ lazy val sbtDockerPublishNavigate =
 lazy val herokuRelease =
   WorkflowStep.Run(
     List(
-      "docker manifest inspect noirlab/gpp-obs", // TODO Remove this once we are victorious
       "pnpm install -g heroku",
       "heroku container:login",
       "docker tag noirlab/gpp-obs registry.heroku.com/${{ vars.HEROKU_APP_NAME_GN || 'observe-dev-gn' }}/web",
