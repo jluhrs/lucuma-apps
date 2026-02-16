@@ -731,7 +731,7 @@ lazy val observe_deploy = project
     // See https://devcenter.heroku.com/articles/container-registry-and-runtime#known-issues-and-limitations and
     // https://stackoverflow.com/questions/79639270/docker-heroku-error-from-registry-unsupported for the solution
     logLevel                 := Level.Debug,
-    dockerBuildxPlatforms    := Seq("linux/amd64"),
+    // dockerBuildxPlatforms    := Seq("linux/amd64"),
     dockerBuildOptions ++= Seq("--provenance", "false", "--output", "type=docker"),
     // "--build-arg=BUILDKIT_INLINE_CACHE=1"
     // ),
