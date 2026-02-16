@@ -1158,6 +1158,7 @@ lazy val sbtDockerPublishNavigate =
 lazy val herokuRelease =
   WorkflowStep.Run(
     List(
+      "docker manifest inspect noirlab/gpp-obs", // TODO Remove this once we are victorious
       "pnpm install -g heroku",
       "heroku container:login",
       "docker tag noirlab/gpp-obs registry.heroku.com/${{ vars.HEROKU_APP_NAME_GN || 'observe-dev-gn' }}/web",
