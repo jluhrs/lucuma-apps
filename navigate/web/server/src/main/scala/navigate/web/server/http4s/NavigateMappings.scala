@@ -40,7 +40,6 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.Observation
 import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
-import lucuma.core.util.DateInterval
 import lucuma.core.util.Gid
 import lucuma.core.util.TimeSpan
 import lucuma.schemas.ObservationDB.Enums.EphemerisKeyType
@@ -607,8 +606,8 @@ class NavigateMappings[F[_]: Sync](
 
   def refreshEphemerisFiles(env: Env): F[Result[OperationOutcome]] =
     env
-      .get[Option[DateInterval]]("dateInterval")
-      .map(d => server.refreshEphemerides(d.map(_.start)).attempt.map(convertResult))
+      .get[Option[LocalDate]]("observingNight")
+      .map(d => server.refreshEphemerides(d).attempt.map(convertResult))
       .getOrElse(
         Result
           .failure[OperationOutcome]("Ephemeris file refresh parameter could not be parsed.")
@@ -648,20 +647,20 @@ class NavigateMappings[F[_]: Sync](
       .flatMap(x => Elab.env("period" -> x))
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
-    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))               =>
+    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))             =>
+    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))          =>
+    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))            =>
       for {
         x <- Elab.liftR(
                parseRotatorConfig(fields).toResult("Could not parse rotatorConfig parameters.")
              )
         _ <- Elab.env("config", x)
       } yield ()
-    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))                 =>
+    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))                   =>
       Elab.env("enable" -> en)
-    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))              =>
+    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))                =>
       for {
         x <-
           Elab.liftR(parseTcsConfigInput(fields).toResult("Could not parse TCS config parameters."))
@@ -697,7 +696,7 @@ class NavigateMappings[F[_]: Sync](
         y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
         _ <- Elab.env("config" -> y)
       } yield ()
-    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))         =>
+    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))           =>
       for {
         x <-
           Elab.liftR(
@@ -705,7 +704,7 @@ class NavigateMappings[F[_]: Sync](
           )
         _ <- Elab.env("swapConfig", x)
       } yield ()
-    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))          =>
+    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))            =>
       for {
         x <-
           Elab.liftR(
@@ -725,31 +724,31 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("instrumentSpecificsParams" -> x)
       } yield ()
-    case (MutationType, "pwfs1Target", List(Binding("target", ObjectValue(fields))))            =>
+    case (MutationType, "pwfs1Target", List(Binding("target", ObjectValue(fields))))              =>
       selectWfsTarget("pwfs1", fields)
-    case (MutationType, "pwfs1ProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
+    case (MutationType, "pwfs1ProbeTracking", List(Binding("config", ObjectValue(fields))))       =>
       selectProbeTracking("pwfs1", fields)
-    case (MutationType, "pwfs1Follow", List(Binding("enable", BooleanValue(en))))               =>
+    case (MutationType, "pwfs1Follow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "pwfs1Observe", List(Binding("period", ObjectValue(fields))))           =>
+    case (MutationType, "pwfs1Observe", List(Binding("period", ObjectValue(fields))))             =>
       selectWfsObserve("pwfs1", fields)
-    case (MutationType, "pwfs2Target", List(Binding("target", ObjectValue(fields))))            =>
+    case (MutationType, "pwfs2Target", List(Binding("target", ObjectValue(fields))))              =>
       selectWfsTarget("pwfs2", fields)
-    case (MutationType, "pwfs2ProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
+    case (MutationType, "pwfs2ProbeTracking", List(Binding("config", ObjectValue(fields))))       =>
       selectProbeTracking("pwfs2", fields)
-    case (MutationType, "pwfs2Follow", List(Binding("enable", BooleanValue(en))))               =>
+    case (MutationType, "pwfs2Follow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "pwfs2Observe", List(Binding("period", ObjectValue(fields))))           =>
+    case (MutationType, "pwfs2Observe", List(Binding("period", ObjectValue(fields))))             =>
       selectWfsObserve("pwfs2", fields)
-    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))            =>
+    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))              =>
       selectWfsTarget("oiwfs", fields)
-    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
+    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))))       =>
       selectProbeTracking("oiwfs", fields)
-    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))               =>
+    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))           =>
+    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))             =>
       selectWfsObserve("oiwfs", fields)
-    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))              =>
+    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))                =>
       for {
         x <- Elab.liftR(
                parseTimeSpan(fields).toResult(
@@ -758,7 +757,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
-    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))            =>
+    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))              =>
       for {
         x <- Elab.liftR(
                parseGuideConfig(fields).toResult(
@@ -785,7 +784,7 @@ class NavigateMappings[F[_]: Sync](
         _    <- Elab.env("from" -> from)
         _    <- Elab.env("to" -> to)
       } yield ()
-    case (MutationType, "acquisitionAdjustment", List(Binding("adjustment", ObjectValue(adj)))) =>
+    case (MutationType, "acquisitionAdjustment", List(Binding("adjustment", ObjectValue(adj))))   =>
       Elab
         .liftR(
           parseAcquisitionAdjustment(adj)
@@ -847,7 +846,7 @@ class NavigateMappings[F[_]: Sync](
         _ <- Elab.env("target", t)
         _ <- Elab.env("openLoops", openLoops)
       } yield ()
-    case (MutationType, "absorbTargetAdjustment", List(Binding("target", EnumValue(target))))   =>
+    case (MutationType, "absorbTargetAdjustment", List(Binding("target", EnumValue(target))))     =>
       for {
         t <- Elab.liftR(
                parseEnumerated[VirtualTelescope](target).toResult(
@@ -856,7 +855,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("target", t)
       } yield ()
-    case (MutationType, "adjustPointing", List(Binding("offset", ObjectValue(offset))))         =>
+    case (MutationType, "adjustPointing", List(Binding("offset", ObjectValue(offset))))           =>
       for {
         o <- Elab.liftR(
                parseHandsetAdjustment(offset).toResult(
@@ -885,7 +884,7 @@ class NavigateMappings[F[_]: Sync](
           List(Binding("openLoops", BooleanValue(openLoops)))
         ) =>
       Elab.env("openLoops", openLoops)
-    case (MutationType, "acLens", List(Binding("lens", EnumValue(name))))                       =>
+    case (MutationType, "acLens", List(Binding("lens", EnumValue(name))))                         =>
       for {
         t <- Elab.liftR(
                parseEnumerated[AcLens](name).toResult(
@@ -894,7 +893,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("lens", t)
       } yield ()
-    case (MutationType, "acFilter", List(Binding("filter", EnumValue(name))))                   =>
+    case (MutationType, "acFilter", List(Binding("filter", EnumValue(name))))                     =>
       for {
         t <- Elab.liftR(
                parseEnumerated[AcFilter](name).toResult(
@@ -903,7 +902,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("filter", t)
       } yield ()
-    case (MutationType, "acNdFilter", List(Binding("ndFilter", EnumValue(name))))               =>
+    case (MutationType, "acNdFilter", List(Binding("ndFilter", EnumValue(name))))                 =>
       for {
         t <- Elab.liftR(
                parseEnumerated[AcNdFilter](name).toResult(
@@ -912,7 +911,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("ndFilter", t)
       } yield ()
-    case (MutationType, "acWindowSize", List(Binding("size", ObjectValue(l))))                  =>
+    case (MutationType, "acWindowSize", List(Binding("size", ObjectValue(l))))                    =>
       for {
         t <- Elab.liftR(
                parseAcWindowSize(l).toResult(
@@ -921,7 +920,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("size", t)
       } yield ()
-    case (MutationType, "pwfs1Filter", List(Binding("filter", EnumValue(name))))                =>
+    case (MutationType, "pwfs1Filter", List(Binding("filter", EnumValue(name))))                  =>
       for {
         t <- Elab.liftR(
                parseEnumerated[PwfsFilter](name).toResult(
@@ -930,7 +929,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("filter", t)
       } yield ()
-    case (MutationType, "pwfs1FieldStop", List(Binding("fieldStop", EnumValue(name))))          =>
+    case (MutationType, "pwfs1FieldStop", List(Binding("fieldStop", EnumValue(name))))            =>
       for {
         t <- Elab.liftR(
                parseEnumerated[PwfsFieldStop](name).toResult(
@@ -939,7 +938,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("fieldStop", t)
       } yield ()
-    case (MutationType, "pwfs2Filter", List(Binding("filter", EnumValue(name))))                =>
+    case (MutationType, "pwfs2Filter", List(Binding("filter", EnumValue(name))))                  =>
       for {
         t <- Elab.liftR(
                parseEnumerated[PwfsFilter](name).toResult(
@@ -948,7 +947,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("filter", t)
       } yield ()
-    case (MutationType, "pwfs2FieldStop", List(Binding("fieldStop", EnumValue(name))))          =>
+    case (MutationType, "pwfs2FieldStop", List(Binding("fieldStop", EnumValue(name))))            =>
       for {
         t <- Elab.liftR(
                parseEnumerated[PwfsFieldStop](name).toResult(
@@ -957,26 +956,26 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("fieldStop", t)
       } yield ()
-    case (MutationType, "pwfs1CircularBuffer", List(Binding("enable", BooleanValue(v))))        =>
+    case (MutationType, "pwfs1CircularBuffer", List(Binding("enable", BooleanValue(v))))          =>
       Elab.env("enable" -> v)
-    case (MutationType, "pwfs2CircularBuffer", List(Binding("enable", BooleanValue(v))))        =>
+    case (MutationType, "pwfs2CircularBuffer", List(Binding("enable", BooleanValue(v))))          =>
       Elab.env("enable" -> v)
-    case (MutationType, "oiwfsCircularBuffer", List(Binding("enable", BooleanValue(v))))        =>
+    case (MutationType, "oiwfsCircularBuffer", List(Binding("enable", BooleanValue(v))))          =>
       Elab.env("enable" -> v)
     case (MutationType,
           "refreshEphemerisFiles",
-          List(Binding("dateInterval", AbsentValue | NullValue))
+          List(Binding("observingNight", AbsentValue | NullValue))
         ) =>
-      Elab.env("dateInterval", none[DateInterval])
-    case (MutationType, "refreshEphemerisFiles", List(Binding("dateInterval", ObjectValue(l)))) =>
+      Elab.env("observingNight", none[LocalDate])
+    case (MutationType, "refreshEphemerisFiles", List(Binding("observingNight", StringValue(l)))) =>
       Elab
         .liftR(
-          parseDateInterval(l)
+          parseDate(l)
             .map(_.some)
-            .toResult(s"Could not parse refreshEphemerisFiles parameter \"dateInterval\" ${l}")
+            .toResult(s"Could not parse refreshEphemerisFiles parameter \"observingNight\" ${l}")
         )
-        .flatMap(v => Elab.env("dateInterval", v))
-    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
+        .flatMap(v => Elab.env("observingNight", v))
+    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))               =>
       Elab
         .liftR(
           parseEnumerated[Instrument](ins)
@@ -1682,10 +1681,5 @@ object NavigateMappings extends GrackleParsers {
   } yield (x, y)
 
   def parseDate(s: String): Option[LocalDate] = Validated.catchNonFatal(LocalDate.parse(s)).toOption
-
-  def parseDateInterval(l: List[(String, Value)]): Option[DateInterval] = for {
-    str <- l.collectFirst { case ("start", StringValue(v)) => parseDate(v) }.flatten
-    end <- l.collectFirst { case ("end", StringValue(v)) => parseDate(v) }.flatten
-  } yield DateInterval.between(str, end)
 
 }

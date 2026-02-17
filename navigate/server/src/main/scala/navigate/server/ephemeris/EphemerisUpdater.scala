@@ -20,6 +20,7 @@ import navigate.server.OdbProxy
 import org.typelevel.log4cats.Logger
 
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 trait EphemerisUpdater[F[_]] {
   def refreshEphemerides(dateInterval: DateInterval): F[Unit]
@@ -39,10 +40,15 @@ object EphemerisUpdater {
     .map {
       case h: Ephemeris.Key.Horizons =>
         (for {
-          st  <- dateInterval.start.localNightBoundary
-          end <- dateInterval.end.localNightBoundary
+          st  <- dateInterval.start.localNightBoundary(site)
+          end <- dateInterval.end.localNightBoundary(site)
         } yield horizonsClient
-          .ephemeris(h, st.toInstant, end.toInstant, TimeSpan.between(st, end).toMinutes.toInt + 1)
+          .ephemeris(h,
+                     st.toInstant,
+                     end.toInstant,
+                     TimeSpan.between(st, end).toMinutes.toInt + 1,
+                     HorizonsClient.SiteOption.Both
+          )
           .flatMap(
             _.fold(
               _.some.pure[F],
@@ -73,24 +79,35 @@ object EphemerisUpdater {
     .map(_.flattenOption)
 
   extension (date: LocalDate) {
-    private def localNightBoundary: Option[Timestamp] =
-      Timestamp.fromLocalDateTime(LocalObservingNight.localDate.reverseGet(date).start)
+    private def localNightBoundary(site: Site): Option[Timestamp] =
+      Timestamp.fromLocalDateTime(
+        LocalObservingNight.localDate
+          .reverseGet(date)
+          .start
+          .atZone(site.place.timezone)
+          .withZoneSameInstant(ZoneOffset.UTC)
+          .toLocalDateTime
+      )
   }
 
   private def isCovered(
     target:       Ephemeris.Key,
     dateInterval: DateInterval,
-    file:         EphemerisFile
-  ): Boolean = target === file.ephemeris && dateInterval.start.localNightBoundary.exists(
-    _ >= file.start
-  ) && dateInterval.end.localNightBoundary.exists(_ <= file.end)
+    file:         EphemerisFile,
+    site:         Site
+  ): Boolean = target === file.ephemeris && dateInterval.start
+    .localNightBoundary(site)
+    .exists(
+      _ >= file.start
+    ) && dateInterval.end.localNightBoundary(site).exists(_ <= file.end)
 
   private def threshFilesAndTargets[F[_]](
     targets:      List[Ephemeris.Key],
     dateInterval: DateInterval,
-    files:        List[EphemerisFile]
+    files:        List[EphemerisFile],
+    site:         Site
   ): (List[Ephemeris.Key], List[EphemerisFile]) = (
-    targets.filter(f => !files.exists(isCovered(f, dateInterval, _))),
+    targets.filter(f => !files.exists(isCovered(f, dateInterval, _, site))),
     List.empty
   )
 
@@ -117,12 +134,12 @@ object EphemerisUpdater {
     override def refreshEphemerides(dateInterval: DateInterval): F[Unit] = for {
       files             <- readEphemerisFiles(filePath)
       targets           <- odbProxy.queryNonSiderealObs(site, dateInterval.start, dateInterval.end)
-      _                 <- L.info(s"Refresh ephemerides: Targets needed: ${targets.mkString}")
-      (toLoad, toDelete) = threshFilesAndTargets(targets, dateInterval, files)
-      _                 <- L.info(s"Refresh ephemerides: Files to be generated for ${toLoad.mkString}")
+      _                 <- L.info(s"Refresh ephemerides: Targets needed: ${targets.mkString(", ")}")
+      (toLoad, toDelete) = threshFilesAndTargets(targets, dateInterval, files, site)
+      _                 <- L.info(s"Refresh ephemerides: Files to be generated for ${toLoad.mkString(", ")}")
       _                 <- deleteFiles(toDelete)
       errors            <- createEphemerisFiles(horizonsClient, toLoad, dateInterval, site, filePath)
-      _                 <- L.info(s"Refresh ephemerides: Errors when generating files: ${errors.mkString}")
+      _                 <- L.info(s"Refresh ephemerides: Errors when generating files: ${errors.mkString(", ")}")
                              .whenA(errors.nonEmpty)
     } yield ()
 

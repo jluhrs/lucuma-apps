@@ -2572,10 +2572,8 @@ class NavigateMappingsSuite extends CatsEffectSuite {
               """
         | mutation {
         |   refreshEphemerisFiles(
-        |     dateInterval: {
-        |       start: "2026-01-01"
-        |       end: "2026-01-02"
-        |     } ) { result } }
+        |     observingNight: "2026-01-01"
+        |   ) { result } }
         """.stripMargin
             )
     } yield assertEquals(
