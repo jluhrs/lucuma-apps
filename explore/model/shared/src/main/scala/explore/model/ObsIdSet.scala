@@ -16,15 +16,16 @@ import monocle.Prism
 import scala.collection.immutable.SortedSet
 
 case class ObsIdSet(idSet: NonEmptySet[Observation.Id]):
-  def ++(other: ObsIdSet): ObsIdSet                    = ObsIdSet(idSet ++ other.idSet)
-  def --(other: Set[Observation.Id]): Option[ObsIdSet] =
+  def ++(other:       ObsIdSet): ObsIdSet                    = ObsIdSet(idSet ++ other.idSet)
+  def --(other: Set[Observation.Id]): Option[ObsIdSet]       =
     NonEmptySet.fromSet(idSet.toSortedSet -- other).map(ObsIdSet(_))
-  def --(other: ObsIdSet): Option[ObsIdSet]            =
+  def --(other: ObsIdSet): Option[ObsIdSet]                  =
     --(other.idSet.toSortedSet)
-  def -(other: Observation.Id): Option[ObsIdSet]       =
+  def -(other: Observation.Id): Option[ObsIdSet]             =
     NonEmptySet.fromSet(idSet - other).map(ObsIdSet(_))
-  def head: Observation.Id                             = idSet.head
-  def size: Long                                       = idSet.size
+  def head: Observation.Id                                   = idSet.head
+  def size: Long                                             = idSet.size
+  def subsetOf(other: ObsIdSet): Boolean                     = idSet.toSortedSet.subsetOf(other.toSortedSet)
 
 object ObsIdSet {
   given Order[ObsIdSet] = Order.by(_.idSet)

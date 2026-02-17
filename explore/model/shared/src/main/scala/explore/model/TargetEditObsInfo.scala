@@ -59,6 +59,9 @@ case class TargetEditObsInfo(
   lazy val incompleteForTarget: Option[ObsIdSet] = incomplete(allForTarget)
   lazy val allForTargetAreCompleted: Boolean     = allForTarget.isDefined && incompleteForTarget.isEmpty
   lazy val allForTargetAreIncomplete: Boolean    = completedForTarget.isEmpty
+
+  lazy val allCurrentAreOngoing: Boolean = allCurrentAreIncomplete && allCurrentAreExecuted
+
 object TargetEditObsInfo:
   def fromProgramSummaries(
     tid:       Target.Id,

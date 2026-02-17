@@ -305,20 +305,44 @@ class TargetEditCloneInfoSuite extends FunSuite with MyAssertions {
     assertSimple(cloneInfo, TargetEditCloneInfo.onlyThisGoodMsg(Executed), three.some)
   }
 
-  test("all of current are executed") {
+  test("all of current are ongoing") {
     val obsInfo   = TargetEditObsInfo(two.some, oneTwo.some, two.some, none)
     val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
-    assertReadonly(cloneInfo, TargetEditCloneInfo.thisBadMsg(Executed))
+    assertReadonly(cloneInfo, TargetEditCloneInfo.thisBadMsg(Ongoing))
   }
 
-  test("all of current are executed 2") {
+  test("all of current are ongoing 2") {
     val obsInfo   = TargetEditObsInfo(twoThree.some, allFour.some, oneTwoThree.some, none)
+    val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
+    assertReadonly(cloneInfo, TargetEditCloneInfo.allCurrentBadMsg(Ongoing))
+  }
+
+  test("all of current are ongoing 3") {
+    val obsInfo   = TargetEditObsInfo(twoThree.some, allFour.some, allFour.some, none)
+    val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
+    assertReadonly(cloneInfo, TargetEditCloneInfo.allCurrentBadMsg(Ongoing))
+  }
+
+  test("all of current are completed") {
+    val obsInfo   = TargetEditObsInfo(two.some, oneTwo.some, two.some, two.some)
+    val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
+    assertReadonly(cloneInfo, TargetEditCloneInfo.thisBadMsg(Completed))
+  }
+
+  test("all of current are completed 2") {
+    val obsInfo   = TargetEditObsInfo(twoThree.some, oneTwo.some, allFour.some, allFour.some)
+    val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
+    assertReadonly(cloneInfo, TargetEditCloneInfo.allCurrentBadMsg(Completed))
+  }
+
+  test("all of current are executed") {
+    val obsInfo   = TargetEditObsInfo(twoThree.some, allFour.some, oneTwoThree.some, two.some)
     val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
     assertReadonly(cloneInfo, TargetEditCloneInfo.allCurrentBadMsg(Executed))
   }
 
-  test("all of current are executed 3") {
-    val obsInfo   = TargetEditObsInfo(twoThree.some, allFour.some, allFour.some, none)
+  test("all of current are executed 2") {
+    val obsInfo   = TargetEditObsInfo(oneTwo.some, allFour.some, allFour.some, oneThree.some)
     val cloneInfo = TargetEditCloneInfo.fromObsInfo(obsInfo, false)
     assertReadonly(cloneInfo, TargetEditCloneInfo.allCurrentBadMsg(Executed))
   }

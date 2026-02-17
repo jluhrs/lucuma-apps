@@ -31,6 +31,7 @@ case class ObsIdSetEditInfo(
   val hasExecuted: Boolean         = executed.isDefined
   val unExecuted: Option[ObsIdSet] = executed.fold(editing.some)(editing.remove)
   val allAreExecuted: Boolean      = unExecuted.isEmpty
+  val allAreOngoing: Boolean       = ongoing.fold(false)(editing.subsetOf)
 
 object ObsIdSetEditInfo:
   def fromObservationList(editing: ObsIdSet, observations: ObservationList): ObsIdSetEditInfo =
