@@ -60,7 +60,8 @@ case class BlindOffsetControl(
   obsTime:      Instant,
   baseTracking: Tracking,
   obsTargets:   ObservationTargets,
-  allTargets:   View[TargetList]
+  allTargets:   View[TargetList],
+  readonly:     Boolean
 ) extends ReactFnProps(BlindOffsetControl)
 
 // TODO: Set the blind offset to the selected target when it is changed.
@@ -249,7 +250,7 @@ object BlindOffsetControl
                     tooltip = "Select Previous Candidate",
                     tooltipOptions = TooltipOptions.ShowOnDisabled,
                     severity = Button.Severity.Secondary,
-                    disabled = index.get < 1 || isWorking.get.value,
+                    disabled = index.get < 1 || isWorking.get.value || props.readonly,
                     onClick = selectIndex(candidates, index.get - 1)
                   ).veryCompact,
                   Button(
@@ -258,7 +259,7 @@ object BlindOffsetControl
                     tooltipOptions = TooltipOptions.ShowOnDisabled,
                     severity = Button.Severity.Secondary,
                     disabled =
-                      (index.get + 1) >= candidates.length || index.get < 0 || isWorking.get.value,
+                      (index.get + 1) >= candidates.length || index.get < 0 || isWorking.get.value || props.readonly,
                     onClick = selectIndex(candidates, index.get + 1)
                   ).veryCompact,
                   text
@@ -268,6 +269,7 @@ object BlindOffsetControl
                     label = "Revert to Automatic",
                     tooltip = "Use automatic blind offset selection",
                     tooltipOptions = TooltipOptions.Left,
+                    disabled = props.readonly,
                     onClick = setBlindOffset(
                       nel.head,
                       BlindOffsetType.Automatic,
@@ -280,7 +282,8 @@ object BlindOffsetControl
                     severity = Button.Severity.Danger,
                     tooltip = "Delete blind offset",
                     tooltipOptions = TooltipOptions.Left,
-                    onClick = deleteBlindOffsetTarget
+                    onClick = deleteBlindOffsetTarget,
+                    disabled = props.readonly
                   ).veryCompact
                 )
               )

@@ -61,16 +61,17 @@ import java.time.Instant
 import scala.concurrent.duration.*
 
 case class AladinCell(
-  uid:                User.Id,
-  obsTargets:         ObservationTargets,
-  obsTime:            Instant,
-  obsConf:            Option[ObsConfiguration],
-  fullScreen:         View[AladinFullScreen],
-  userPreferences:    View[UserPreferences],
-  guideStarSelection: View[GuideStarSelection],
-  blindOffsetInfo:    Option[(Observation.Id, View[BlindOffset])],
-  allTargets:         View[TargetList], // for blind offset, no undo
-  isStaffOrAdmin:     Boolean
+  uid:                 User.Id,
+  obsTargets:          ObservationTargets,
+  obsTime:             Instant,
+  obsConf:             Option[ObsConfiguration],
+  fullScreen:          View[AladinFullScreen],
+  userPreferences:     View[UserPreferences],
+  guideStarSelection:  View[GuideStarSelection],
+  blindOffsetInfo:     Option[(Observation.Id, View[BlindOffset])],
+  allTargets:          View[TargetList], // for blind offset, no undo
+  isStaffOrAdmin:      Boolean,
+  blindOffsetReadonly: Boolean
 ) extends ReactFnProps(AladinCell.component):
   val needsAGS: Boolean =
     obsConf.exists(_.needGuideStar)
@@ -466,7 +467,8 @@ object AladinCell extends ModelOptics with AladinCommon:
             props.obsTime,
             bt,
             props.obsTargets,
-            props.allTargets
+            props.allTargets,
+            props.blindOffsetReadonly
           )
 
       <.div(ExploreStyles.TargetAladinCell)(
