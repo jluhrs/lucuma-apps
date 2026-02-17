@@ -39,9 +39,9 @@ object EphemerisFile {
 
   /** Header required by the TCS. */
   val Header: String =
-    """***************************************************************************************
-      | Date__(UT)__HR:MN Date_________JDUT     R.A.___(ICRF/J2000.0)___DEC dRA*cosD d(DEC)/dt
-      |***************************************************************************************""".stripMargin
+    """****************************************************************************************
+      | Date__(UT)__HR:MN Date_________JDUT     R.A.___(ICRF/J2000.0)___DEC  dRA*cosD d(DEC)/dt
+      |****************************************************************************************""".stripMargin
 
   /** Marker for the start of ephemeris elements in the file. */
   val SOE: String = "$$SOE"
@@ -89,11 +89,11 @@ object EphemerisFile {
     val (s, carryC) = s0.startsWith("60").fold((df.format(0), 1), (s0, 0))
 
     val m0          = b + carryC
-    val (m, carryB) = (m0 == 60).fold(("00", 1), (f"$m0%02d", 0))
+    val (m, carryB) = (m0 === 60).fold(("00", 1), (f"$m0%02d", 0))
 
     val x = a + carryB
 
-    if (x == max) s"00${sep}00$sep${df.format(0)}"
+    if (x === max) s"00${sep}00$sep${df.format(0)}"
     else f"$x%02d$sep$m$sep$s"
   }
 
@@ -121,7 +121,14 @@ object EphemerisFile {
   }
 
   def formatHMS(hms: HMS, sep: String = ":", fractionalDigits: Int = 3): String =
-    format3(hms.hours, hms.minutes, hms.seconds, 24, sep, fractionalDigits)
+    format3(
+      hms.hours,
+      hms.minutes,
+      hms.seconds.toDouble + hms.milliseconds.toDouble / 1000.0 + hms.microseconds.toDouble / 1e6,
+      24,
+      sep,
+      fractionalDigits
+    )
 
   // TODO: We need to know which site we need inside the Ephemeris.
   def format(ephemeris: Ephemeris.Horizons, site: Site): String = {
@@ -137,8 +144,10 @@ object EphemerisFile {
         val timeS     = Time.format(entry.when)
         val jdS       = f"${JulianDate.ofInstant(entry.when).toDouble}%.9f"
         val coordsS   = formatCoords(entry.coordinates)
-        val raTrackS  = f"${entry.velocity.p.toAngle.toSignedDoubleDegrees}%9.5f"
-        val decTrackS = f"${entry.velocity.q.toAngle.toSignedDoubleDegrees}%9.5f"
+        val raTrackS  =
+          f"${Angle.signedDecimalArcseconds.get(entry.velocity.p.toAngle).toDouble}%9.5f"
+        val decTrackS =
+          f"${Angle.signedDecimalArcseconds.get(entry.velocity.q.toAngle).toDouble}%9.5f"
         s" $timeS $jdS    $coordsS $raTrackS $decTrackS"
     }
 

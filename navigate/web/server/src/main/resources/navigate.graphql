@@ -461,11 +461,6 @@ type WfsConfigState {
     saving: Boolean!
 }
 
-input DateIntervalInput {
-    start: Date!
-    end: Date!
-}
-
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -551,7 +546,7 @@ type Mutation {
     acNdFilter(ndFilter: AcNdFilter!): OperationOutcome!
     acFilter(filter: AcFilter!): OperationOutcome!
     acWindowSize(size: AcWindowInput!): OperationOutcome!
-    refreshEphemerisFiles(dateInterval: DateIntervalInput): OperationOutcome!
+    refreshEphemerisFiles(observingNight: Date): OperationOutcome!
 }
 
 type Subscription {

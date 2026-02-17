@@ -83,7 +83,6 @@ object EphemerisUpdater {
       Timestamp.fromLocalDateTime(
         LocalObservingNight.localDate
           .reverseGet(date)
-          .next
           .start
           .atZone(site.place.timezone)
           .withZoneSameInstant(ZoneOffset.UTC)
