@@ -59,9 +59,11 @@ object AladinControlsPanel {
         centralWavelength = CentralWavelength(Wavelength.fromIntNanometers(500).get)
       )
     } else
-      BasicConfiguration.GmosSouthImaging(
-        filter = NonEmptyList.one(GmosSouthFilter.HeII)
-      )
+      // TODO UPDATE
+      <.div
+      // BasicConfiguration.GmosSouthImaging(
+      //   filter = NonEmptyList.one(GmosSouthFilter.HeII)
+      // )
 
   val component = ScalaFnComponent[Props]: props =>
     for {
@@ -147,14 +149,17 @@ object AladinControlsPanel {
                     case _: BasicConfiguration.GmosSouthImaging  => GmosMode.Imaging
                     case _                                       => GmosMode.Imaging
                   }
-                ) { (f: GmosMode => GmosMode) => (config: BasicConfiguration) =>
-                  val currentMode = config match {
-                    case _: BasicConfiguration.GmosSouthLongSlit => GmosMode.LongSlit
-                    case _: BasicConfiguration.GmosSouthImaging  => GmosMode.Imaging
-                    case _                                       => GmosMode.Imaging
-                  }
-                  val newMode     = f(currentMode)
-                  baseGmosConf(newMode)
+                  // ) { (f: GmosMode => GmosMode) => (config: BasicConfiguration) =>
+                ) { (_: GmosMode => GmosMode) => (config: BasicConfiguration) =>
+                  // TODO UPDATE
+                  // val currentMode = config match {
+                  //   case _: BasicConfiguration.GmosSouthLongSlit => GmosMode.LongSlit
+                  //   case _: BasicConfiguration.GmosSouthImaging  => GmosMode.Imaging
+                  //   case _                                       => GmosMode.Imaging
+                  // }
+                  // val newMode     = f(currentMode)
+                  // baseGmosConf(newMode)
+                  config
                 }
                 <.div(
                   Css("input-group"),

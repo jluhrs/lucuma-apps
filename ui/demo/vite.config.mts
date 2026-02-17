@@ -9,8 +9,8 @@ const scalaVersion = '3.8.1';
 export default defineConfig(({ mode }) => {
   const sjs =
     mode == 'production'
-      ? path.resolve(__dirname, `target/scala-${scalaVersion}/demo-opt/`)
-      : path.resolve(__dirname, `target/scala-${scalaVersion}/demo-fastopt/`);
+      ? path.resolve(__dirname, `target/scala-${scalaVersion}/ui_demo-opt/`)
+      : path.resolve(__dirname, `target/scala-${scalaVersion}/ui_demo-fastopt/`);
   return {
     root: 'src/main/webapp',
     resolve: {

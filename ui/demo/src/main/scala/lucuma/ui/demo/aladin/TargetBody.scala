@@ -3,13 +3,12 @@
 
 package demo
 
+import cats.data.NonEmptyList
 import cats.syntax.all.*
 import crystal.react.hooks.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
-import lucuma.core.enums.Flamingos2Disperser
-import lucuma.core.enums.Flamingos2Filter
-import lucuma.core.enums.Flamingos2Fpu
+import lucuma.core.enums.GmosNorthFilter
 import lucuma.core.enums.PortDisposition
 import lucuma.core.math.*
 import lucuma.react.common.*
@@ -74,7 +73,7 @@ object AladinTile {
       // (BreakpointName.xs, (480, 6, layout))
     )
 
-  given Reusability[Fov] = Reusability.derive
+  // given Reusability[Fov] = Reusability.derive
 
   val component =
     ScalaFnComponent[Props]: props =>
@@ -86,7 +85,13 @@ object AladinTile {
         posAngle        <- useStateView(Angle.Angle0)
         instrument      <- useStateView(InstrumentType.GMOS)
         configuration   <-
-          useStateView[BasicConfiguration](AladinContainer.baseGmosConf(GmosMode.Imaging))
+          useStateView[BasicConfiguration](
+            BasicConfiguration.GmosNorthImaging(
+              filters = NonEmptyList.one(GmosNorthFilter.HeII)
+            )
+          )
+        // TODO UPDATE
+        // useStateView[BasicConfiguration](AladinContainer.baseGmosConf(GmosMode.Imaging))
         portDisposition <- useStateView(PortDisposition.Side)
         survey          <- useStateView(ImageSurvey.DSS)
         visSettings     <- useStateView(VisualizationSettings())
@@ -98,16 +103,18 @@ object AladinTile {
                                case InstrumentType.GMOS       => ImageSurvey.DSS
                                case InstrumentType.Flamingos2 => ImageSurvey.TWOMASS
                              }
-                             val newConfig = instr match {
-                               case InstrumentType.GMOS       => AladinContainer.baseGmosConf(GmosMode.Imaging)
-                               case InstrumentType.Flamingos2 =>
-                                 BasicConfiguration.Flamingos2LongSlit(
-                                   disperser = Flamingos2Disperser.R1200HK,
-                                   filter = Flamingos2Filter.H,
-                                   fpu = Flamingos2Fpu.LongSlit2
-                                 )
-                             }
-                             survey.set(newSurvey) *> configuration.set(newConfig)
+                             //  val newConfig = instr match {
+                             //    case InstrumentType.GMOS       => AladinContainer.baseGmosConf(GmosMode.Imaging)
+                             //    case InstrumentType.Flamingos2 =>
+                             //      BasicConfiguration.Flamingos2LongSlit(
+                             //        disperser = Flamingos2Disperser.R1200HK,
+                             //        filter = Flamingos2Filter.H,
+                             //        fpu = Flamingos2Fpu.LongSlit2
+                             //      )
+                             //  }
+                             survey.set(newSurvey) // *>
+        // TODO UPDATE
+        //  configuration.set(newConfig)
       } yield <.div(
         ^.height := "100%",
         ^.width  := "100%",

@@ -4,25 +4,17 @@
 package demo
 
 import cats.data.NonEmptyList
-import cats.data.NonEmptyMap
 import cats.syntax.all.*
 import crystal.react.View
 import crystal.react.hooks.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
-import lucuma.ags.AgsAnalysis
-import lucuma.ags.AgsGuideQuality
-import lucuma.ags.GuideStarCandidate
 import lucuma.core.enums.GmosSouthFilter
 import lucuma.core.enums.GmosSouthFpu
 import lucuma.core.enums.GmosSouthGrating
-import lucuma.core.enums.GuideProbe
-import lucuma.core.enums.GuideSpeed
 import lucuma.core.enums.PortDisposition
 import lucuma.core.enums.SequenceType
-import lucuma.core.geom.Area
 import lucuma.core.math.*
-import lucuma.core.model.SiderealTracking
 import lucuma.core.util.Display
 import lucuma.core.util.Enumerated
 import lucuma.react.common.*
@@ -115,9 +107,11 @@ object AladinContainer {
         centralWavelength = CentralWavelength(Wavelength.fromIntNanometers(500).get)
       )
     } else
-      BasicConfiguration.GmosSouthImaging(
-        filter = NonEmptyList.one(GmosSouthFilter.HeII)
-      )
+      // TODO UPDATE
+      <.div
+      // BasicConfiguration.GmosSouthImaging(
+      //   filter = NonEmptyList.one(GmosSouthFilter.HeII)
+      // )
 
   val component = ScalaFnComponent[Props]: props =>
     for {
@@ -177,85 +171,87 @@ object AladinContainer {
       val gs = props.coordinates
 
       // Get the appropriate configuration based on selected instrument and mode
-      val currentConf = props.configuration.get.some
+      // val currentConf = props.configuration.get.some
 
       // Use the generated offset grids
       val scienceOffsetList     = props.scienceOffset.get
       val acquisitionOffsetList = acquisitionOffsetGrid.get.some
 
-      val shapes = props.instrument.get match {
-        case InstrumentType.GMOS       =>
-          GmosGeometry.gmosGeometry(
-            props.coordinates,
-            scienceOffsetList,
-            acquisitionOffsetList,
-            props.posAngle.get.some,
-            currentConf,
-            props.portDisposition.get,
-            AgsAnalysis
-              .Usable(
-                GuideProbe.GmosOIWFS,
-                GuideStarCandidate(0L, SiderealTracking.const(gs), None).get,
-                GuideSpeed.Fast,
-                AgsGuideQuality.DeliversRequestedIq,
-                props.posAngle.get,
-                Area.MinArea
-              )
-              .some,
-            VisualizationStyles.GuideStarCandidateVisible
-          )
-        case InstrumentType.Flamingos2 =>
-          Flamingos2Geometry.f2Geometry(
-            props.coordinates,
-            scienceOffsetList,
-            acquisitionOffsetList,
-            props.posAngle.get.some,
-            currentConf,
-            props.portDisposition.get,
-            AgsAnalysis
-              .Usable(
-                GuideProbe.GmosOIWFS,
-                GuideStarCandidate(0L, SiderealTracking.const(gs), None).get,
-                GuideSpeed.Fast,
-                AgsGuideQuality.DeliversRequestedIq,
-                props.posAngle.get,
-                Area.MinArea
-              )
-              .some,
-            VisualizationStyles.GuideStarCandidateVisible
-          )
-      }
+      // TODO UPDATE
+      // val shapes = props.instrument.get match {
+      //   case InstrumentType.GMOS       =>
+      // GmosGeometry.gmosGeometry(
+      //   props.coordinates,
+      //   scienceOffsetList,
+      //   acquisitionOffsetList,
+      //   props.posAngle.get.some,
+      //   currentConf,
+      //   props.portDisposition.get,
+      //   AgsAnalysis
+      //     .Usable(
+      //       GuideProbe.GmosOIWFS,
+      //       GuideStarCandidate(0L, SiderealTracking.const(gs), None).get,
+      //       GuideSpeed.Fast,
+      //       AgsGuideQuality.DeliversRequestedIq,
+      //       props.posAngle.get,
+      //       Area.MinArea
+      //     )
+      //     .some,
+      //   VisualizationStyles.GuideStarCandidateVisible
+      // )
+      //   case InstrumentType.Flamingos2 =>
+      // Flamingos2Geometry.f2Geometry(
+      //   props.coordinates,
+      //   scienceOffsetList,
+      //   acquisitionOffsetList,
+      //   props.posAngle.get.some,
+      //   currentConf,
+      //   props.portDisposition.get,
+      //   AgsAnalysis
+      //     .Usable(
+      //       GuideProbe.GmosOIWFS,
+      //       GuideStarCandidate(0L, SiderealTracking.const(gs), None).get,
+      //       GuideSpeed.Fast,
+      //       AgsGuideQuality.DeliversRequestedIq,
+      //       props.posAngle.get,
+      //       Area.MinArea
+      //     )
+      //     .some,
+      //   VisualizationStyles.GuideStarCandidateVisible
+      // )
+      // }
 
-      def visibilityClasses = props.instrument.get match {
-        case InstrumentType.GMOS       =>
-          val isImaging = props.configuration.get match {
-            case _: BasicConfiguration.GmosSouthImaging => true
-            case _                                      => false
-          }
-          VisualizationStyles.GmosFpuVisible.when_(props.visSettings.get.fpuVisible) |+|
-            VisualizationStyles.GmosCcdVisible.when_(
-              props.visSettings.get.ccdVisible && isImaging
-            ) |+|
-            VisualizationStyles.GmosCandidatesAreaVisible.when_(
-              props.visSettings.get.candidatesAreaVisible
-            ) |+|
-            VisualizationStyles.GmosPatrolFieldVisible.when_(
-              props.visSettings.get.patrolFieldVisible
-            ) |+|
-            VisualizationStyles.GmosProbeVisible.when_(props.visSettings.get.probeVisible)
-        case InstrumentType.Flamingos2 =>
-          VisualizationStyles.Flamingos2FpuVisible.when_(props.visSettings.get.fpuVisible) |+|
-            VisualizationStyles.Flamingos2ScienceAreaVisible.when_(
-              props.visSettings.get.ccdVisible
-            ) |+|
-            VisualizationStyles.Flamingos2CandidatesAreaVisible.when_(
-              props.visSettings.get.candidatesAreaVisible
-            ) |+|
-            VisualizationStyles.Flamingos2PatrolFieldVisible.when_(
-              props.visSettings.get.patrolFieldVisible
-            ) |+|
-            VisualizationStyles.Flamingos2ProbeArmVisible.when_(props.visSettings.get.probeVisible)
-      }
+      // TODO UPDATE
+      // def visibilityClasses = props.instrument.get match {
+      //   case InstrumentType.GMOS       =>
+      //     val isImaging = props.configuration.get match {
+      //       case _: BasicConfiguration.GmosSouthImaging => true
+      //       case _                                      => false
+      //     }
+      //     VisualizationStyles.GmosFpuVisible.when_(props.visSettings.get.fpuVisible) |+|
+      //       VisualizationStyles.GmosCcdVisible.when_(
+      //         props.visSettings.get.ccdVisible && isImaging
+      //       ) |+|
+      //       VisualizationStyles.GmosCandidatesAreaVisible.when_(
+      //         props.visSettings.get.candidatesAreaVisible
+      //       ) |+|
+      //       VisualizationStyles.GmosPatrolFieldVisible.when_(
+      //         props.visSettings.get.patrolFieldVisible
+      //       ) |+|
+      //       VisualizationStyles.GmosProbeVisible.when_(props.visSettings.get.probeVisible)
+      //   case InstrumentType.Flamingos2 =>
+      //     VisualizationStyles.Flamingos2FpuVisible.when_(props.visSettings.get.fpuVisible) |+|
+      //       VisualizationStyles.Flamingos2ScienceAreaVisible.when_(
+      //         props.visSettings.get.ccdVisible
+      //       ) |+|
+      //       VisualizationStyles.Flamingos2CandidatesAreaVisible.when_(
+      //         props.visSettings.get.candidatesAreaVisible
+      //       ) |+|
+      //       VisualizationStyles.Flamingos2PatrolFieldVisible.when_(
+      //         props.visSettings.get.patrolFieldVisible
+      //       ) |+|
+      //       VisualizationStyles.Flamingos2ProbeArmVisible.when_(props.visSettings.get.probeVisible)
+      // }
 
       val scienceOffsetIndicators =
         offsetIndicators(
@@ -299,17 +295,18 @@ object AladinContainer {
         if (resize.height.exists(_ >= 100))
           <.div(
             Css("aladin-viewer"),
-            (resize.width, resize.height, shapes.flatMap(NonEmptyMap.fromMap))
-              .mapN((w, h, s) =>
-                SVGVisualizationOverlay(
-                  w,
-                  h,
-                  props.fov.get,
-                  vizOffset,
-                  s,
-                  clazz = visibilityClasses
-                )
-              ),
+            // TODO UPDATE
+            // (resize.width, resize.height, shapes.flatMap(NonEmptyMap.fromMap))
+            //   .mapN((w, h, s) =>
+            //     SVGVisualizationOverlay(
+            //       w,
+            //       h,
+            //       props.fov.get,
+            //       vizOffset,
+            //       s,
+            //       clazz = visibilityClasses
+            //     )
+            //   ),
             (resize.width, resize.height)
               .mapN(
                 TargetsOverlay(
@@ -319,10 +316,10 @@ object AladinContainer {
                   vizOffset,
                   props.coordinates,
                   List(
-                    SVGTarget
+                    SvgTarget
                       .CrosshairTarget(props.coordinates, Css("science-target"), 10)
                       .some,
-                    gs.some.map(SVGTarget.CircleTarget(_, Css("guidestar"), 3))
+                    gs.some.map(SvgTarget.CircleTarget(_, Css("guidestar"), 3))
                   ).flatten ++ offsetTargets
                 )
               ),
