@@ -767,7 +767,7 @@ thead tr th.sticky-header {
   gap: 1em;
 
   > * {
-    flex: 0 0 min-content;
+    flex: 0 0 auto;
   }
 
   .explore-obs-instant-tile-title {

@@ -199,7 +199,8 @@ object ObservationTargetsEditorTile
                       props.obsAndTargets,
                       adding,
                       props.onAsterismUpdate,
-                      props.readonly || obsEditInfo.allAreExecuted,
+                      readOnly = props.readonly || obsEditInfo.allAreExecuted,
+                      allowBlindOffset = !props.readonly,
                       buttonClass = ExploreStyles.AddTargetButton,
                       blindOffsetInfo = props.blindOffsetInfo
                     )
