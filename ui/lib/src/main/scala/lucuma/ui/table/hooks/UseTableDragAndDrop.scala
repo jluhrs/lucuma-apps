@@ -3,7 +3,6 @@
 
 package lucuma.ui.table.hooks
 
-import cats.Eq
 import cats.syntax.all.*
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.feature.Context
@@ -34,41 +33,25 @@ final case class UseTableDragAndDrop[D, T, TM, CM, TF](
   context: Context.Provided[DragAndDropContext]
 )
 
-// Auto apply with TagMod.empty if no parameters specified
-given autoApplyRowMod[D, T, TM, CM, TF]: Conversion[
-  ((Row[T, TM, CM, TF], RowDraggingInfo[D]) => TagMod) => (
+// Allow skipping the tagMod function if not needed.
+extension [D, T, TM, CM, TF](
+  rowMod: ((Row[T, TM, CM, TF], RowDraggingInfo[D]) => TagMod) => (
     Row[T, TM, CM, TF],
     Option[Ref.ToVdom[HTMLElement]] => TagOf[HTMLElement]
-  ) => VdomNode,
-  (Row[T, TM, CM, TF], Option[Ref.ToVdom[HTMLElement]] => TagOf[HTMLElement]) => VdomNode
-] with
-  def apply(
-    rowMod: ((Row[T, TM, CM, TF], RowDraggingInfo[D]) => TagMod) => (
-      Row[T, TM, CM, TF],
-      Option[Ref.ToVdom[HTMLElement]] => TagOf[HTMLElement]
-    ) => VdomNode
-  ): (Row[T, TM, CM, TF], Option[Ref.ToVdom[HTMLElement]] => TagOf[HTMLElement]) => VdomNode =
+  ) => VdomNode
+)
+  def apply()
+    : (Row[T, TM, CM, TF], Option[Ref.ToVdom[HTMLElement]] => TagOf[HTMLElement]) => VdomNode =
     rowMod((_, _) => TagMod.empty)
 
-given autoApplyCellMod[D, T, TM, CM, TF]: Conversion[
-  ((Cell[T, Any, TM, CM, TF, Any, Any], RowDraggingInfo[D]) => TagMod) => (
-    Cell[T, Any, TM, CM, TF, Any, Any],
-    Option[Ref.ToVdom[HTMLElement]],
-    TagOf[HTMLElement]
-  ) => VdomNode,
-  (
+extension [D, T, TM, CM, TF](
+  cellMod: ((Cell[T, Any, TM, CM, TF, Any, Any], RowDraggingInfo[D]) => TagMod) => (
     Cell[T, Any, TM, CM, TF, Any, Any],
     Option[Ref.ToVdom[HTMLElement]],
     TagOf[HTMLElement]
   ) => VdomNode
-] with
-  def apply(
-    cellMod: ((Cell[T, Any, TM, CM, TF, Any, Any], RowDraggingInfo[D]) => TagMod) => (
-      Cell[T, Any, TM, CM, TF, Any, Any],
-      Option[Ref.ToVdom[HTMLElement]],
-      TagOf[HTMLElement]
-    ) => VdomNode
-  ): (
+)
+  def apply(): (
     Cell[T, Any, TM, CM, TF, Any, Any],
     Option[Ref.ToVdom[HTMLElement]],
     TagOf[HTMLElement]
@@ -76,7 +59,7 @@ given autoApplyCellMod[D, T, TM, CM, TF]: Conversion[
     cellMod((_, _) => TagMod.empty)
 
 object UseTableDragAndDrop:
-  def useTableDragAndDrop[D: Eq, T, TM, CM, TF](
+  def useTableDragAndDrop[D: cats.Eq, T, TM, CM, TF](
     @unused table: Table[T, TM, CM, TF], // Not used, just to infer type parameters.
     getData:       Row[T, TM, CM, TF] => D,
     onDrop:        (D, Option[Target[D]]) => Callback = (_: D, _: Option[Target[D]]) => Callback.empty

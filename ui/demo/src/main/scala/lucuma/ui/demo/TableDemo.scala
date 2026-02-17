@@ -10,7 +10,6 @@ import lucuma.react.common.*
 import lucuma.react.syntax.*
 import lucuma.react.table.*
 import lucuma.ui.table.hooks.*
-import lucuma.ui.table.hooks.given
 
 object TableDemo:
   case class Details(year: Int, pickups: Int, color: String)
@@ -71,6 +70,6 @@ object TableDemo:
             (^.boxShadow := "inset 0 -2px green")
               .unless(draggingInfo.isDragging.contains(c.original.id))
           ),
-          cellMod = tableDnd.cellMod
+          cellMod = tableDnd.cellMod()
         )
       )
