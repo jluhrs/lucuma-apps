@@ -2,6 +2,8 @@
   "name": "explore",
   "private": true,
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "1.7.7",
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "1.1.0",
     "@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration": "2.0.14",
     "@floating-ui/react": "0.27.17",
     "@fontsource/lato": "5.2.7",
