@@ -50,9 +50,10 @@ object TargetEditCloneInfo:
   def noMessages: TargetEditCloneInfo                                                        =
     TargetEditCloneInfo(false)
 
-  enum BadType(val text: String):
-    case Executed  extends BadType("executed")
-    case Completed extends BadType("completed")
+  enum BadType(val text: String, val singular: String, val plural: String):
+    case Executed  extends BadType("executed", "has been executed", "have been executed")
+    case Completed extends BadType("completed", "has been completed", "have been completed")
+    case Ongoing   extends BadType("ongoing", "is ongoing", "are ongoing")
 
   import BadType.*
 
@@ -60,15 +61,15 @@ object TargetEditCloneInfo:
   val onlyCurrentMsg: NonEmptyString                          = "only the current observations".refined
   def allCurrentBadMsg(badType: BadType): NonEmptyString      =
     NonEmptyString.unsafeFrom(
-      s"All the current observations have been ${badType.text}. Target is readonly."
+      s"All the current observations ${badType.plural}. Target is readonly."
     )
   def thisBadMsg(badType: BadType): NonEmptyString            =
     NonEmptyString.unsafeFrom(
-      s"The current observation has been ${badType.text}. Target is readonly."
+      s"The current observation ${badType.singular}. Target is readonly."
     )
   def allForTargetBadMsg(badType: BadType): NonEmptyString    =
     NonEmptyString.unsafeFrom(
-      s"All associated observations have been ${badType.text}. Target is readonly"
+      s"All associated observations ${badType.plural}. Target is readonly"
     )
   def allNonBadOfCurrentMsg(badType: BadType): NonEmptyString =
     NonEmptyString.unsafeFrom(
@@ -80,17 +81,17 @@ object TargetEditCloneInfo:
     )
   def someBadMsg(badType: BadType): NonEmptyString            =
     NonEmptyString.unsafeFrom(
-      s"Some of the observations being edited have been ${badType.text}. Edits should apply to "
+      s"Some of the observations being edited ${badType.plural}. Edits should apply to "
     )
   def allNonBadMsg(badType: BadType): NonEmptyString          =
     NonEmptyString.unsafeFrom(s"all non-${badType.text} observations")
   def onlyThisGoodMsg(badType: BadType): NonEmptyString       =
     NonEmptyString.unsafeFrom(
-      s"Target will only be modified for this observation. All other observations have been ${badType.text}."
+      s"Target will only be modified for this observation. All other observations ${badType.plural}."
     )
   def onlyTheseGoodMsg(badType: BadType): NonEmptyString      =
     NonEmptyString.unsafeFrom(
-      s"Target will only be modified for the current observations. All other observations have been ${badType.text}."
+      s"Target will only be modified for the current observations. All other observations ${badType.plural}."
     )
 
   extension (obsIds: ObsIdSet)
@@ -177,6 +178,10 @@ object TargetEditCloneInfo:
             obsInfo.incompleteForTarget,
             allNonBadMsg(Completed)
           )
+      case Some(editing) if obsInfo.allCurrentAreOngoing                                 =>
+        TargetEditCloneInfo.readonly(editing.allBadMsg(Ongoing))
+      case Some(editing) if obsInfo.allCurrentAreCompleted                               =>
+        TargetEditCloneInfo.readonly(editing.allBadMsg(Completed))
       case Some(editing) if obsInfo.allCurrentAreExecuted                                =>
         TargetEditCloneInfo.readonly(editing.allBadMsg(Executed))
       // There are no other unexecuted observations, but there may be other observations.

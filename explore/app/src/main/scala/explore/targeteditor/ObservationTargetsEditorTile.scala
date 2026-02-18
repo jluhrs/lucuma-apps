@@ -224,9 +224,17 @@ object ObservationTargetsEditorTile
                 ObservationPreferences.upsertPreferredTarget[IO](obsId, tid).runAsync
 
           val editWarningMsg: Option[String] =
-            if (obsEditInfo.allAreExecuted)
+            if (obsEditInfo.allAreOngoing)
               if (obsEditInfo.editing.length > 1)
-                "All of the current observations are executed. Asterism is readonly.".some
+                "All of the current observations are ongoing. Asterism is readonly.".some
+              else "The current observation is ongoing. Asterism is readonly.".some
+            else if (obsEditInfo.allAreCompleted)
+              if (obsEditInfo.editing.length > 1)
+                "All of the current observations have been completed. Asterism is readonly.".some
+              else "The current observation has been completed. Asterism is readonly.".some
+            else if (obsEditInfo.allAreExecuted)
+              if (obsEditInfo.editing.length > 1)
+                "All of the current observations have been executed. Asterism is readonly.".some
               else "The current observation has been executed. Asterism is readonly.".some
             else if (obsEditInfo.executed.isDefined)
               "Adding and removing targets will only affect the unexecuted observations.".some
