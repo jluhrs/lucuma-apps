@@ -36,11 +36,14 @@ import lucuma.react.common.ReactFnComponent
 import lucuma.react.common.ReactFnProps
 import lucuma.react.primereact.Button
 import lucuma.react.primereact.MenuItem
+import lucuma.react.primereact.PopupMenu
 import lucuma.react.primereact.SplitButton
+import lucuma.react.primereact.hooks.all.*
 import lucuma.schemas.model.TargetWithId
 import lucuma.schemas.model.TargetWithOptId
 import lucuma.schemas.model.enums.BlindOffsetType
 import lucuma.ui.primereact.*
+import japgolly.scalajs.react.vdom.VdomNode
 
 case class AddTargetButton(
   label:            String,
@@ -50,6 +53,7 @@ case class AddTargetButton(
   adding:           View[AreAdding],
   onAsterismUpdate: OnAsterismUpdateParams => Callback,
   readOnly:         Boolean = false,
+  allowBlindOffset: Boolean = false, // will be staff only for Ongoing
   buttonClass:      Css = Css.Empty,
   blindOffsetInfo:  Option[(Observation.Id, View[BlindOffset])] = none
 ) extends ReactFnProps(AddTargetButton):
@@ -120,6 +124,7 @@ object AddTargetButton
                           .one[TargetSource[IO]](
                             TargetSource.FromProgram[IO](props.obsAndTargets.get._2)
                           )
+        blindRef   <- usePopupMenuRef
       yield
         import ctx.given
 
@@ -188,23 +193,7 @@ object AddTargetButton
           TargetSource.FromHorizons[IO](ctx.horizonsClient)
         )
 
-        val menuItems = List(
-          MenuItem.Item("Non-Sidereal Target Search",
-                        icon = Icons.PlanetRinged,
-                        command = onSelected.set(insertTargetCB) >>
-                          sources.set(horizons) >> popupState.set(PopupState.Open)
-          ),
-          MenuItem.Item("Empty Sidereal Target",
-                        icon = Icons.Star,
-                        command = insertTargetCB(TargetWithOptId.newScience(EmptySiderealTarget))
-          ),
-          MenuItem.Item("Target of Opportunity",
-                        icon = Icons.HourglassClock,
-                        command =
-                          insertTargetCB(TargetWithOptId.newScience(EmptyOpportunityTarget)),
-                        disabled = hasTargets
-          )
-        ) ++
+        val blindOffsetItems: List[MenuItem] =
           props.blindOffsetInfo
             .fold(List.empty)((obsId, blindOffset) =>
               List(
@@ -238,19 +227,55 @@ object AddTargetButton
                   .some
               ).flattenOption
             )
+        val showBlindOffsetButton            =
+          props.readOnly && props.allowBlindOffset && blindOffsetItems.nonEmpty
+
+        val menuItems = List(
+          MenuItem.Item("Non-Sidereal Target Search",
+                        icon = Icons.PlanetRinged,
+                        command = onSelected.set(insertTargetCB) >>
+                          sources.set(horizons) >> popupState.set(PopupState.Open)
+          ),
+          MenuItem.Item("Empty Sidereal Target",
+                        icon = Icons.Star,
+                        command = insertTargetCB(TargetWithOptId.newScience(EmptySiderealTarget))
+          ),
+          MenuItem.Item("Target of Opportunity",
+                        icon = Icons.HourglassClock,
+                        command =
+                          insertTargetCB(TargetWithOptId.newScience(EmptyOpportunityTarget)),
+                        disabled = hasTargets
+          )
+        ) ++
+          blindOffsetItems
+
+        // In order for the title bar to look right, we need to have exactly one button in the DOM,
+        // although it doesn't need to be visible.
+        val button: VdomNode =
+          if showBlindOffsetButton then
+            Button(
+              label = "Blind Offset",
+              icon = Icons.New,
+              severity = Button.Severity.Success,
+              loading = props.adding.get.value,
+              onClickE = blindRef.toggle,
+              clazz = props.buttonClass
+            ).tiny.compact
+          else
+            SplitButton(
+              model = menuItems,
+              onClick = onSelected.set(insertTargetCB) >> sources.set(programsAndSimbad) >>
+                popupState.set(PopupState.Open),
+              severity = Button.Severity.Success,
+              icon = Icons.New,
+              disabled = props.readOnly || props.adding.get.value || hasTargetOfOpportunity,
+              loading = props.adding.get.value,
+              label = props.label,
+              clazz = props.buttonClass |+| ExploreStyles.Hidden.when_(props.readOnly)
+            ).tiny.compact
 
         React.Fragment(
-          SplitButton(
-            model = menuItems,
-            onClick = onSelected.set(insertTargetCB) >> sources.set(programsAndSimbad) >>
-              popupState.set(PopupState.Open),
-            severity = Button.Severity.Success,
-            icon = Icons.New,
-            disabled = props.readOnly || props.adding.get.value || hasTargetOfOpportunity,
-            loading = props.adding.get.value,
-            label = props.label,
-            clazz = props.buttonClass |+| ExploreStyles.Hidden.when_(props.readOnly)
-          ).tiny.compact,
+          button,
           TargetSelectionPopup(
             "Add Target",
             popupState,
@@ -260,6 +285,7 @@ object AddTargetButton
             selectNewLabel = "Add",
             selectNewIcon = Icons.New,
             onSelected = onSelected.get
-          )
+          ),
+          PopupMenu(model = blindOffsetItems).withRef(blindRef.ref)
         )
     )
