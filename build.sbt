@@ -299,7 +299,7 @@ lazy val ui_css = project
 
 lazy val ui_demo =
   project
-    .in(file("observe/ui/demo"))
+    .in(file("ui/demo"))
     .enablePlugins(ScalaJSPlugin, LucumaCssPlugin)
     .dependsOn(ui_lib, ui_css)
     .settings(

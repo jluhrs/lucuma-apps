@@ -12,14 +12,9 @@ import scala.scalajs.js.annotation.*
 object Demo extends AppMain {
   override protected val rootComponent: VdomElement =
     <.div(
-      <.div(
-        FormComponent()
-      ),
-      <.div(
-        IconsDemo.component()
-      ),
-      <.div(
-        ThemeDemo.component()
-      )
+      <.div(FormComponent()),
+      <.div(IconsDemo.component()),
+      <.div(ThemeDemo.component()),
+      <.div(TableDemo.component())
     )
 }
