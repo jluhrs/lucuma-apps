@@ -498,29 +498,6 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
       .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
       .compose(setOrigin(config.instrumentSpecifics.origin))
-      .compose(
-        config.oiwfs
-          .map(o =>
-            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
-                      o.target
-            )
-              .compose(
-                setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
-                                   _.oiwfsProbeTrackingCommand
-                                 ),
-                                 o.tracking
-                )
-              )
-          )
-          .getOrElse(
-            setProbeTracking(
-              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
-                _.oiwfsProbeTrackingCommand
-              ),
-              TrackingConfig.noTracking
-            )
-          )
-      )
 
   private val TcsConfigTimeout = FiniteDuration(60, SECONDS)
 
@@ -1687,15 +1664,15 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       disableGuide *>
       lightPath(LightSource.Sky, LightSinkName.Ac) *>
       sys.hrwfs.status.filter.verifiedRun(ConnectionTimeout).flatMap { x =>
-        applyPointToGuideConfig(
-          swapConfig.toTcsConfig
-            .focus(_.sourceATarget)
-            .andThen(Target.wavelength)
-            .replace(x.getOrElse(AcFilter.Neutral).toWavelength.some)
-        )(
-          sys.tcsEpics.startCommand(TcsConfigTimeout)
-        ).post
-          .verifiedRun(ConnectionTimeout)
+        (resetAllTracking *>
+          applyPointToGuideConfig(
+            swapConfig.toTcsConfig
+              .focus(_.sourceATarget)
+              .andThen(Target.wavelength)
+              .replace(x.getOrElse(AcFilter.Neutral).toWavelength.some)
+          )(
+            sys.tcsEpics.startCommand(TcsConfigTimeout)
+          ).post).verifiedRun(ConnectionTimeout)
       }
 
   override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] = {
