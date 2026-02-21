@@ -36,8 +36,8 @@ importers:
         specifier: 2.0.14
         version: 2.0.14(@types/react@19.2.10)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@floating-ui/react':
-        specifier: 0.27.17
-        version: 0.27.17(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 0.27.18
+        version: 0.27.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@fontsource/lato':
         specifier: 5.2.7
         version: 5.2.7
@@ -175,8 +175,8 @@ importers:
   observe/web/client:
     dependencies:
       '@floating-ui/react':
-        specifier: 0.27.17
-        version: 0.27.17(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: 0.27.18
+        version: 0.27.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@fontsource/lato':
         specifier: 5.2.7
         version: 5.2.7
@@ -1147,8 +1147,8 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
-  '@floating-ui/react@0.27.17':
-    resolution: {integrity: sha512-LGVZKHwmWGg6MRHjLLgsfyaX2y2aCNgnD1zT/E6B+/h+vxg+nIJUqHPAlTzsHDyqdgEpJ1Np5kxWuFEErXzoGg==}
+  '@floating-ui/react@0.27.18':
+    resolution: {integrity: sha512-xJWJxvmy3a05j643gQt+pRbht5XnTlGpsEsAPnMi5F5YTOEEJymA90uZKBD8OvIv5XvZ1qi4GcccSlqT3Bq44Q==}
     peerDependencies:
       react: '>=17.0.0'
       react-dom: '>=17.0.0'
@@ -4940,7 +4940,7 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@floating-ui/react@0.27.17(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@floating-ui/react@0.27.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@floating-ui/react-dom': 2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@floating-ui/utils': 0.2.10
@@ -7207,7 +7207,7 @@ snapshots:
 
   react-datepicker@9.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@floating-ui/react': 0.27.17(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@floating-ui/react': 0.27.18(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       clsx: 2.1.1
       date-fns: 4.1.0
       react: 18.3.1

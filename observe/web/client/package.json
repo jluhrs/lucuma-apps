@@ -2,7 +2,7 @@
   "name": "observe",
   "private": true,
   "dependencies": {
-    "@floating-ui/react": "0.27.17",
+    "@floating-ui/react": "0.27.18",
     "@fontsource/lato": "5.2.7",
     "@fortawesome/fontawesome-svg-core": "7.2.0",
     "@fortawesome/pro-duotone-svg-icons": "7.2.0",
