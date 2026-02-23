@@ -3,13 +3,16 @@
 
 package explore.config
 
+import cats.data.NonEmptyList
 import cats.syntax.all.*
 import clue.data.syntax.*
 import crystal.react.View
 import crystal.react.hooks.*
+import eu.timepit.refined.types.string.NonEmptyString
 import explore.common.Aligner
 import explore.components.*
 import explore.components.ui.ExploreStyles
+import explore.config.offsets.OffsetInput
 import explore.model.AppContext
 import explore.model.Observation
 import explore.model.display.given
@@ -21,6 +24,7 @@ import japgolly.scalajs.react.*
 import japgolly.scalajs.react.util.Effect
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.*
+import lucuma.core.math.Offset
 import lucuma.core.model.ExposureTimeMode
 import lucuma.core.model.Program
 import lucuma.core.util.Display
@@ -33,7 +37,9 @@ import lucuma.schemas.ObservationDB.Types.*
 import lucuma.schemas.model.ObservingMode
 import lucuma.schemas.odb.input.*
 import lucuma.ui.primereact.*
+import lucuma.ui.reusability.given
 import lucuma.ui.syntax.all.given
+import lucuma.ui.utils.*
 
 final case class Flamingos2LongslitConfigPanel(
   programId:       Program.Id,
@@ -51,10 +57,13 @@ final case class Flamingos2LongslitConfigPanel(
 object Flamingos2LongslitConfigPanel
     extends ReactFnComponent[Flamingos2LongslitConfigPanel](props =>
       for
-        ctx       <- useContext(AppContext.ctx)
-        modeData  <-
+        ctx                 <- useContext(AppContext.ctx)
+        modeData            <-
           useModeData(props.confMatrix, props.observingMode.get)
-        editState <- useStateView(ConfigEditState.View)
+        editState           <- useStateView(ConfigEditState.View)
+        unModdedOffsetsView <- useStateView(props.observingMode.get.offsets)
+        _                   <- useEffectWithDeps(props.observingMode.get.offsets):
+                                 unModdedOffsetsView.set
       yield
         import ctx.given
 
@@ -91,6 +100,23 @@ object Flamingos2LongslitConfigPanel
             Flamingos2LongSlitInput.explicitReadMode.modify
           )
           .view(_.orUnassign)
+
+        val explicitOffsetsView: View[Option[NonEmptyList[Offset]]] = props.observingMode
+          .zoom(
+            ObservingMode.Flamingos2LongSlit.explicitOffsets,
+            Flamingos2LongSlitInput.explicitOffsets.modify
+          )
+          .view(_.map(_.toList.map(_.toInput)).orUnassign)
+
+        val defaultOffsets: NonEmptyList[Offset] = props.observingMode.get.defaultOffsets
+
+        val localOffsetsView: View[NonEmptyList[Offset]] =
+          unModdedOffsetsView.withOnMod: nel =>
+            val newOffsets =
+              if nel === defaultOffsets
+              then none
+              else nel.some
+            explicitOffsetsView.set(newOffsets)
 
         val exposureTimeMode: View[ExposureTimeMode] = props.observingMode
           .zoom(
@@ -174,6 +200,26 @@ object Flamingos2LongslitConfigPanel
                 disabled = disableSimpleEdit,
                 showCustomization = showCustomization,
                 allowRevertCustomization = allowRevertCustomization
+              ),
+              <.span(
+                "Spatial Offsets",
+                HelpIcon("configuration/f2/spatial-offsets.md".refined),
+                CustomizedGroupAddon(
+                  "original",
+                  explicitOffsetsView.set(none),
+                  allowRevertCustomization
+                ).when(explicitOffsetsView.get.isDefined)
+              ),
+              React.Fragment(
+                localOffsetsView.toNelOfViews.toList.zipWithIndex
+                  .map: (offsetView, idx) =>
+                    OffsetInput(
+                      id = NonEmptyString.unsafeFrom(s"spatial-offsets-$idx"),
+                      offset = offsetView,
+                      readonly = disableSimpleEdit,
+                      clazz = LucumaPrimeStyles.FormField
+                    )
+                  .toVdomArray
               )
             ),
             <.div(LucumaPrimeStyles.FormColumnCompact)(
