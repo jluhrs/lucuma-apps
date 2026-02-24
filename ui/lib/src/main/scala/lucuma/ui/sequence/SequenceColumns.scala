@@ -35,6 +35,18 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   getStepFromRow:  T => Option[R],
   getIndexFromRow: T => Option[StepIndex]
 ) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStepFromRow):
+  private lazy val dragHandleCol: colDef.TypeFor[Boolean] =
+    colDef(
+      SequenceColumns.DragHandleColumnId,
+      _.getStep.map(_.isFinished).getOrElse(true),
+      header = "",
+      cell = c =>
+        val isFinished: Boolean = c.value
+        <.span(SequenceStyles.DragHandleCell)(
+          SequenceIcons.GripDotsVertical.unless(isFinished)
+        )
+    )
+
   private lazy val editControlsCol: colDef.TypeFor[Boolean] =
     colDef(
       SequenceColumns.EditControlsColumnId,
@@ -205,6 +217,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
 
   lazy val ForGmos: List[colDef.TypeFor[?]] =
     List(
+      dragHandleCol,
       editControlsCol,
       indexAndTypeCol,
       exposureCol,
@@ -223,6 +236,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
 
   lazy val ForFlamingos2: List[colDef.TypeFor[?]] =
     List(
+      dragHandleCol,
       editControlsCol,
       indexAndTypeCol,
       exposureCol,
@@ -244,6 +258,7 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
       case _                                           => throw new Exception(s"Unimplemented instrument: $instrument")
 
 object SequenceColumns:
+  val DragHandleColumnId: ColumnId   = ColumnId("dragHandle")
   val EditControlsColumnId: ColumnId = ColumnId("editControls")
   val IndexAndTypeColumnId: ColumnId = ColumnId("stepType")
   val ExposureColumnId: ColumnId     = ColumnId("exposure")
@@ -262,6 +277,7 @@ object SequenceColumns:
 
   object BaseColumnSizes {
     private val CommonColumnSizes: Map[ColumnId, ColumnSize] = Map(
+      DragHandleColumnId   -> FixedSize(35.toPx),
       EditControlsColumnId -> FixedSize(70.toPx),
       IndexAndTypeColumnId -> FixedSize(60.toPx),
       ExposureColumnId     -> Resizable(77.toPx, min = 77.toPx, max = 130.toPx),

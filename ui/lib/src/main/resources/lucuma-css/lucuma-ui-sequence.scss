@@ -148,23 +148,24 @@ table tr {
   }
 }
 
+.lucuma-sequence-drag-handle-cell {
+  cursor: grab;
+  // TODO Change to grabbing while dragging
+}
+
 .lucuma-sequence-edit-controls-cell {
   width: 100%;
   display: inline-block;
   text-align: left;
 
-  .lucuma-sequence-clone-button {
+  button {
     background-color: transparent;
     border: 0;
     margin: 0;
     padding-right: 0 !important;
-  }
 
-  .lucuma-sequence-delete-button {
-    background-color: transparent;
-    color: var(--negative-icon-color);
-    border: 0;
-    margin: 0;
-    padding-right: 0 !important;
+    &.lucuma-sequence-delete-button {
+      color: var(--negative-icon-color);
+    }
   }
 }

@@ -116,7 +116,7 @@ object UseTableDragAndDrop:
                        payload.source.element.getBoundingClientRect().height.toInt
                       ).some
                     )
-                ).withKey(s"row-${dndContext.value.get}-$rowData").toUnmounted: VdomNode
+                ).withKey(s"draggable-${row.id.value}").toUnmounted: VdomNode
 
       val cellMod =
         (tagMod: (Cell[T, Any, TM, CM, TF, Any, Any], RowDraggingInfo[D]) => TagMod) =>

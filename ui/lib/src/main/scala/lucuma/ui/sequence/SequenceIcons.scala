@@ -23,6 +23,10 @@ object SequenceIcons:
   val faCrosshairs: FAIcon = js.native
 
   @js.native
+  @JSImport("@fortawesome/pro-solid-svg-icons", "faGripDotsVertical")
+  val faGripDotsVertical: FAIcon = js.native
+
+  @js.native
   @JSImport("@fortawesome/pro-solid-svg-icons", "faSquare")
   val faSquare: FAIcon = js.native
 
@@ -46,11 +50,12 @@ object SequenceIcons:
       TextLayer(letter.toString).withInverse().withSize(IconSize.SM)
     )
 
-  val Circle     = FontAwesomeIcon(faCircle)
-  val Clone      = FontAwesomeIcon(faClone)
-  val Crosshairs = FontAwesomeIcon(faCrosshairs)
-  val Square     = FontAwesomeIcon(faSquare)
-  val Trash      = FontAwesomeIcon(faTrash)
+  val Circle           = FontAwesomeIcon(faCircle)
+  val Clone            = FontAwesomeIcon(faClone)
+  val Crosshairs       = FontAwesomeIcon(faCrosshairs)
+  val GripDotsVertical = FontAwesomeIcon(faGripDotsVertical)
+  val Square           = FontAwesomeIcon(faSquare)
+  val Trash            = FontAwesomeIcon(faTrash)
 
   object StepType:
     val Bias   = letterLayeredIcon(Square, 'B', SequenceStyles.StepType.Bias)
