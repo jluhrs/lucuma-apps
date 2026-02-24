@@ -3,6 +3,7 @@
 
 package explore.config.offsets
 
+import cats.syntax.all.*
 import crystal.react.View
 import eu.timepit.refined.types.string.NonEmptyString
 import explore.model.ExploreModelValidators
@@ -21,14 +22,15 @@ final case class OffsetInput(
   offset:     View[Offset],
   readonly:   Boolean,
   inputClass: Css = Css.Empty,
-  labelClass: Css = Css.Empty
+  labelClass: Css = Css.Empty,
+  clazz:      Css = Css.Empty // for the outter div
 ) extends ReactFnProps(OffsetInput):
   val pId: NonEmptyString = NonEmptyString.unsafeFrom(s"${id.value}-p")
   val qId: NonEmptyString = NonEmptyString.unsafeFrom(s"${id.value}-q")
 
 object OffsetInput
     extends ReactFnComponent[OffsetInput](props =>
-      <.div(OffsetGeneratorEditorStyles.OffsetsInput)(
+      <.div(OffsetGeneratorEditorStyles.OffsetsInput |+| props.clazz)(
         FormInputTextView(
           id = props.pId,
           label = "p:",
