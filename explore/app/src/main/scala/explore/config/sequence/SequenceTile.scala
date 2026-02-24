@@ -9,6 +9,7 @@ import cats.syntax.all.*
 import crystal.Pot
 import crystal.react.View
 import crystal.react.hooks.*
+import crystal.react.syntax.effect.*
 import explore.*
 import explore.components.*
 import explore.components.HelpIcon
@@ -16,6 +17,7 @@ import explore.components.ui.ExploreStyles
 import explore.components.undo.UndoButtons
 import explore.config.sequence.byInstrument.*
 import explore.givens.given
+import explore.model.AppContext
 import explore.model.Execution
 import explore.model.ObsTabTileIds
 import explore.model.Observation
@@ -70,27 +72,35 @@ object SequenceTile
       import SequenceTileHelper.*
 
       for
-        liveSequence              <- useLiveSequence(
-                                       props.obsId,
-                                       props.asterismIds.toList,
-                                       props.customSedTimestamps,
-                                       props.calibrationRole
-                                     )
-        _                         <-
-          useEffectWithDeps(liveSequence.visits, liveSequence.sequence): (visitsPot, sequencePot) =>
-            props.sequenceChanged.set((visitsPot.value, sequencePot.value.map(_.get)).tupled.void)
-        editableSequence          <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
-        resetEditableSequenceFrom <-
-          useCallback: (newLiveSequence: LiveSequence) =>
+        ctx                      <- useContext(AppContext.ctx)
+        liveSequence             <- useLiveSequence(
+                                      props.obsId,
+                                      props.asterismIds.toList,
+                                      props.customSedTimestamps,
+                                      props.calibrationRole
+                                    )
+        editableSequence         <- useStateView(EditableSequence.fromLiveSequence(liveSequence))
+        resetEditableSequenceFrom = // LiveSequence => Callback
+          (newLiveSequence: LiveSequence) =>
             editableSequence.set(EditableSequence.fromLiveSequence(newLiveSequence))
-        _                         <-
+        _                        <-
           useEffectWithDeps(liveSequence): newLiveSequence =>
-            // Keep editable sequence in sync with live sequence when not editing
-            resetEditableSequenceFrom(newLiveSequence)
-              .unless_(props.isEditing.get)
-        undoStacks                <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
-        _                         <- useEffectWithDeps(props.isEditing.get.value): _ =>
-                                       undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
+            props.sequenceChanged.set: // Notify caller of change
+              (newLiveSequence.visits.value, newLiveSequence.sequence.value.map(_.get)).tupled.void
+            >> ( // Invalidate edit sequence if we were editing.
+              ctx.toastCtx
+                .showToast(
+                  "The sequence was modified remotely. The edit session has been canceled.",
+                  Message.Severity.Warning,
+                  sticky = true
+                )
+                .runAsyncAndForget >> props.isEditing.set(IsEditing.False)
+            ).when_(props.isEditing.get) >>
+              // Keep editable sequence in sync with live sequence
+              resetEditableSequenceFrom(newLiveSequence)
+        undoStacks               <- useStateView(UndoStacks.empty[IO, Option[EditableSequence]])
+        _                        <- useEffectWithDeps(props.isEditing.get.value): _ =>
+                                      undoStacks.set(UndoStacks.empty[IO, Option[EditableSequence]])
       yield
         val execution: Execution           = props.obsExecution
         val staleCss: TagMod               = execution.digest.staleClass

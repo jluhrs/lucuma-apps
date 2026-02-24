@@ -27,14 +27,13 @@ import scala.concurrent.duration.*
 object SequenceTileHelper:
 
   protected[sequence] case class LiveSequence(
-    visits:     Reusable[Pot[Option[ExecutionVisits]]],
-    sequence:   Reusable[Pot[View[Option[SequenceData]]]],
-    refreshing: Boolean
+    visits:   Reusable[Pot[Option[ExecutionVisits]]],
+    sequence: Reusable[Pot[View[Option[SequenceData]]]]
   ):
     val isReady: Boolean = visits.isReady && sequence.isReady
 
   protected object LiveSequence:
-    given Reusability[LiveSequence] = Reusability.by(x => (x.visits, x.sequence, x.refreshing))
+    given Reusability[LiveSequence] = Reusability.by(x => (x.visits, x.sequence))
 
   protected[sequence] def useLiveSequence(
     obsId:               Observation.Id,
@@ -80,8 +79,4 @@ object SequenceTileHelper:
           // has been assigned, OR a new version of the custom sed has been uploaded. This is to
           // catch the latter case.
           refreshSequence.value
-    yield LiveSequence(
-      visits.value,
-      sequenceData.state,
-      visits.isRunning || sequenceData.isRunning
-    )
+    yield LiveSequence(visits.value, sequenceData.state)
