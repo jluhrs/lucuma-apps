@@ -28,6 +28,7 @@ import explore.targets.TargetSelectionPopup
 import explore.targets.TargetSource
 import explore.undo.UndoSetter
 import japgolly.scalajs.react.*
+import japgolly.scalajs.react.vdom.VdomNode
 import lucuma.core.enums.TargetDisposition
 import lucuma.core.model.Program
 import lucuma.core.model.Target
@@ -43,7 +44,6 @@ import lucuma.schemas.model.TargetWithId
 import lucuma.schemas.model.TargetWithOptId
 import lucuma.schemas.model.enums.BlindOffsetType
 import lucuma.ui.primereact.*
-import japgolly.scalajs.react.vdom.VdomNode
 
 case class AddTargetButton(
   label:            String,

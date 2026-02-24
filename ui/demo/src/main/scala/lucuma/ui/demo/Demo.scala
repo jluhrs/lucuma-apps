@@ -15,6 +15,7 @@ object Demo extends AppMain {
       <.div(FormComponent()),
       <.div(IconsDemo.component()),
       <.div(ThemeDemo.component()),
-      <.div(TableDemo.component())
+      <.div(TableDemo1.component()),
+      <.div(TableDemo2.component())
     )
 }

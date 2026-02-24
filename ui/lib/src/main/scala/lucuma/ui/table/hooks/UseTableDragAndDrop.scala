@@ -8,7 +8,6 @@ import japgolly.scalajs.react.*
 import japgolly.scalajs.react.feature.Context
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.*
-import lucuma.react.common.*
 import lucuma.react.pragmaticdnd.*
 import lucuma.react.table.*
 import org.scalajs.dom.HTMLElement
@@ -32,6 +31,12 @@ final case class UseTableDragAndDrop[D, T, TM, CM, TF](
   ) => VdomNode,
   context: Context.Provided[DragAndDropContext]
 )
+
+final case class UseVirtualizedTableDragAndDrop[D, T, TM, CM, TF](
+  useTableDragAndDrop: UseTableDragAndDrop[D, T, TM, CM, TF],
+  containerRef:        Ref.ToVdom[HTMLElement]
+):
+  export useTableDragAndDrop.*
 
 // Allow skipping the tagMod function if not needed.
 extension [D, T, TM, CM, TF](
@@ -61,6 +66,7 @@ extension [D, T, TM, CM, TF](
 object UseTableDragAndDrop:
   def useTableDragAndDrop[D: cats.Eq, T, TM, CM, TF](
     @unused table: Table[T, TM, CM, TF], // Not used, just to infer type parameters.
+    handleColId:   ColumnId,
     getData:       Row[T, TM, CM, TF] => D,
     onDrop:        (D, Option[Target[D]]) => Callback = (_: D, _: Option[Target[D]]) => Callback.empty
   ): HookResult[UseTableDragAndDrop[D, T, TM, CM, TF]] =
@@ -103,15 +109,14 @@ object UseTableDragAndDrop:
                 DraggableDropTargetWithHandle(
                   handleRef => render(Some(handleRef))(tagMod(row, draggingInfo)),
                   getInitialData = _ => Data(rowData),
-                  getData = args => Data(rowData).attachClosestEdge(args, Edge.Vertical),
+                  getData = args => Data(rowData).attachClosestEdge(args, Axis.Vertical.edges),
                   onDraggableDragStart = payload =>
                     dragging.setState(
                       (payload.source.data.value,
                        payload.source.element.getBoundingClientRect().height.toInt
                       ).some
-                    ),
-                  onDraggableDrop = _ => dragging.setState(none)
-                ): VdomNode
+                    )
+                ).withKey(s"row-${dndContext.value.get}-$rowData").toUnmounted: VdomNode
 
       val cellMod =
         (tagMod: (Cell[T, Any, TM, CM, TF, Any, Any], RowDraggingInfo[D]) => TagMod) =>
@@ -123,7 +128,7 @@ object UseTableDragAndDrop:
             val rowData: D = getData(cell.row)
 
             context
-              .filter(_ => cell.column.id.value == "handle") // TODO Cursor, with grab
+              .filter(_ => cell.column.id == handleColId)
               .map(handleRef => render.withRef(handleRef))
               .getOrElse(render)(
                 (dragOver.value, dragging.value) match
@@ -137,3 +142,14 @@ object UseTableDragAndDrop:
               )(tagMod(cell, draggingInfo))
 
       UseTableDragAndDrop[D, T, TM, CM, TF](rowMod, cellMod, dndContext)
+
+  def useVirtualizedTableDragAndDrop[D: cats.Eq, T, TM, CM, TF](
+    @unused table: Table[T, TM, CM, TF], // Not used, just to infer type parameters.
+    handleColId:   ColumnId,
+    getData:       Row[T, TM, CM, TF] => D,
+    onDrop:        (D, Option[Target[D]]) => Callback = (_: D, _: Option[Target[D]]) => Callback.empty
+  ): HookResult[UseVirtualizedTableDragAndDrop[D, T, TM, CM, TF]] =
+    for
+      tableDnd     <- useTableDragAndDrop(table, handleColId, getData, onDrop)
+      containerRef <- useAutoScrollRef(getAllowedAxis = _ => Axis.Vertical)
+    yield UseVirtualizedTableDragAndDrop(tableDnd, containerRef)

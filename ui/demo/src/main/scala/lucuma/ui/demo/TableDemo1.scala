@@ -11,7 +11,7 @@ import lucuma.react.syntax.*
 import lucuma.react.table.*
 import lucuma.ui.table.hooks.*
 
-object TableDemo:
+object TableDemo1:
   case class Details(year: Int, pickups: Int, color: String)
   object Details:
     given Reusability[Details] = Reusability.by_==
@@ -25,7 +25,7 @@ object TableDemo:
   private val Columns =
     Reusable.always:
       List(
-        ColDef(ColumnId("handle"), cell = _ => <.span(^.fontSize.large, "≡")).withSize(20.toPx),
+        ColDef(ColumnId("handle"), cell = _ => <.span(Css("handle"), "≡")).withSize(20.toPx),
         ColDef(ColumnId("id"), _.id, "Id", ctx => s"g-${ctx.value}"),
         ColDef(ColumnId("make"), _.make, _ => "Make"),
         ColDef(ColumnId("model"), _.model, _ => "Model"),
@@ -56,6 +56,7 @@ object TableDemo:
                       TableOptions(Columns, guitars, enableColumnResizing = true)
         tableDnd <- useTableDragAndDrop(
                       table,
+                      ColumnId("handle"),
                       getData = _.original.id,
                       onDrop = (sourceData, target) =>
                         Callback.log:
