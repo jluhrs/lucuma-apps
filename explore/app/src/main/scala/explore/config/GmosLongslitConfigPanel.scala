@@ -721,7 +721,6 @@ object GmosLongslitConfigPanel {
     obsId:               Observation.Id,
     calibrationRole:     Option[CalibrationRole],
     observingMode:       Aligner[ObservingMode.GmosSouthLongSlit, GmosSouthLongSlitInput],
-    // spectroscopyRequirements: ScienceRequirements.Spectroscopy,
     revertConfig:        Callback,
     confMatrix:          SpectroscopyModesMatrix,
     sequenceChanged:     Callback,
