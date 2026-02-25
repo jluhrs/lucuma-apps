@@ -14,6 +14,8 @@ import org.scalajs.dom.HTMLElement
 
 import scala.annotation.unused
 
+import scalajs.js
+
 type Source[D] = (data: D, height: Int)
 type Target[D] = (data: D, edge: Edge)
 
@@ -147,9 +149,11 @@ object UseTableDragAndDrop:
     @unused table: Table[T, TM, CM, TF], // Not used, just to infer type parameters.
     handleColId:   ColumnId,
     getData:       Row[T, TM, CM, TF] => D,
-    onDrop:        (D, Option[Target[D]]) => Callback = (_: D, _: Option[Target[D]]) => Callback.empty
+    onDrop:        (D, Option[Target[D]]) => Callback = (_: D, _: Option[Target[D]]) => Callback.empty,
+    containerRef:  js.UndefOr[Ref.ToVdom[HTMLElement]] = js.undefined
   ): HookResult[UseVirtualizedTableDragAndDrop[D, T, TM, CM, TF]] =
     for
       tableDnd     <- useTableDragAndDrop(table, handleColId, getData, onDrop)
-      containerRef <- useAutoScrollRef(getAllowedAxis = _ => Axis.Vertical)
+      containerRef <-
+        useAutoScrollRef(getAllowedAxis = _ => Axis.Vertical, containerRef = containerRef)
     yield UseVirtualizedTableDragAndDrop(tableDnd, containerRef)

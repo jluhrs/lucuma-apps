@@ -3,6 +3,7 @@
 
 package lucuma.ui.table.hooks
 
+import cats.Endo
 import japgolly.scalajs.react.*
 import lucuma.react.SizePx
 import lucuma.react.table.*
@@ -33,6 +34,12 @@ class UseDynTable(
     cols.map:
       case col @ ColumnDef.Single(_) => col.withColumnSize(initialColumnSizes(col.id))
       case col @ ColumnDef.Group(_)  => col.withColumnSize(initialColumnSizes(col.id))
+
+  lazy val modifyColumnSizing: Endo[ColumnSizing] => Callback =
+    mod => onColumnSizingChangeHandler(Updater.Mod(mod))
+
+  lazy val modifyColumnVisibility: Endo[ColumnVisibility] => Callback =
+    mod => onColumnVisibilityChangeHandler(Updater.Mod(mod))
 
   export colState.{computedVisibility => columnVisibility, resized => columnSizing}
 
