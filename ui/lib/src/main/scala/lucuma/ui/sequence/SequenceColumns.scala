@@ -34,13 +34,13 @@ class SequenceColumns[D, T, R <: SequenceRow[D], TM <: SequenceTableMeta[D], CM,
   colDef:          ColumnDef.Applied[Expandable[HeaderOrRow[T]], TM, CM, TF],
   getStepFromRow:  T => Option[R],
   getIndexFromRow: T => Option[StepIndex]
-) extends SequenceEditOptics[D, T, R, TM, CM, TF](getStepFromRow):
+) extends SequenceEditRowHelpers[D, T, R, TM, CM, TF](getStepFromRow):
   private lazy val dragHandleCol: colDef.TypeFor[Boolean] =
     colDef(
       SequenceColumns.DragHandleColumnId,
       _.getStep.map(_.isFinished).getOrElse(true),
       header = "",
-      cell = c =>
+      cell = c => // TODO HIDE IN VISITS
         val isFinished: Boolean = c.value
         <.span(SequenceStyles.DragHandleCell)(
           SequenceIcons.GripDotsVertical.unless(isFinished)

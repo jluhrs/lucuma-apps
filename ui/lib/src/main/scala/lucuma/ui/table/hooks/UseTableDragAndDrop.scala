@@ -108,7 +108,9 @@ object UseTableDragAndDrop:
           ) =>
             val rowData: D = getData(row)
             dragging.value match
-              case Some((data, height)) if data === rowData => EmptyVdom
+              case Some((data, height)) if data === rowData =>
+                // <.tr((^.height := s"${height}px").when(dragOver.value.isEmpty)): VdomNode
+                EmptyVdom
               case _                                        =>
                 DraggableDropTargetWithHandle(
                   handleRef => render(Some(handleRef))(tagMod(row, draggingInfo)),

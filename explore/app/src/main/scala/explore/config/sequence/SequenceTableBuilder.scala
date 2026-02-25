@@ -33,7 +33,9 @@ private type SequenceColumnsType[D] =
 private type ColumnType[D]          =
   ColumnDef[Expandable[HeaderOrRow[SequenceIndexedRow[D]]], ?, Nothing, Nothing, Nothing, Any, Any]
 
-private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends SequenceRowBuilder[D]:
+private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument)
+    extends SequenceRowBuilder[D]
+    with SequenceEditOptics[D]:
   private type Props = SequenceTable[S, D]
 
   private case class TableMeta[D](
@@ -136,9 +138,16 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                               case _                          => none,
                         containerRef = resize.ref,
                         onDrop = (sourceData, target) =>
-                          Callback.log:
-                            s"Dropped $sourceData on: $target"
-                        ,
+                          (table.options.meta,
+                           sourceData.map(_._1),
+                           sourceData.map(_._2),
+                           target.flatMap(_.data.map(_._1)),
+                           target.map(_.edge)
+                          )
+                            .mapN: (meta, sourceStepId, seqType, targetStepId, edge) =>
+                              meta.seqTypeMod(seqType):
+                                moveStep(sourceStepId, targetStepId, edge)
+                            .orEmpty,
                         canDrop = (targetData, sourceArgs) =>
                           targetData.exists: // Only allow dragging into same sequence type
                             case (targetStepId, targetSeqType) =>
@@ -210,13 +219,9 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                   case Right(stepRow) =>
                     cell.column.id match
                       case id if id == DragHandleColumnId   =>
-                        TagMod(
-                          ^.paddingRight := "0"
-                        ) // , ^.display.none.unless(props.isEditing.value))
+                        TagMod(^.paddingRight := "0")
                       case id if id == EditControlsColumnId =>
-                        TagMod(
-                          ^.paddingLeft := "0"
-                        ) // , ^.display.none.unless(props.isEditing.value))
+                        TagMod(^.paddingLeft := "0")
                       case id if id == ExtraRowColumnId     =>
                         stepRow.step match // Extra row is shown in a selected row or in an executed step row.
                           case SequenceRow.Executed.ExecutedStep(_, _) => extraRowMod
