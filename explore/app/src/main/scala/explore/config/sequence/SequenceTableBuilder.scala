@@ -129,11 +129,21 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
         tableDnd   <- useVirtualizedTableDragAndDrop(
                         table,
                         DragHandleColumnId,
-                        getData = _.original.value.toOption.flatMap(_.step.id.toOption),
+                        getData = _.original.value.toOption
+                          .flatMap:
+                            _.step match
+                              case SequenceRow.futureStep(fs) => (fs.stepId, fs.seqType).some
+                              case _                          => none,
                         containerRef = resize.ref,
                         onDrop = (sourceData, target) =>
                           Callback.log:
                             s"Dropped $sourceData on: $target"
+                        ,
+                        canDrop = (targetData, sourceArgs) =>
+                          targetData.exists: // Only allow dragging into same sequence type
+                            case (targetStepId, targetSeqType) =>
+                              sourceArgs.source.data.value.exists: (sourceStepId, sourceSeqType) =>
+                                sourceSeqType === targetSeqType && sourceStepId != targetStepId
                       )
       yield
         val extraRowMod: TagMod =
