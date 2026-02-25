@@ -19,7 +19,7 @@
     "@react-hook/resize-observer": "2.0.2",
     "@react-hook/size": "2.1.2",
     "@tanstack/react-table": "8.21.3",
-    "@tanstack/react-virtual": "3.13.18",
+    "@tanstack/react-virtual": "3.13.19",
     "aladin-lite": "3.7.2-beta",
     "highcharts": "12.5.0",
     "loglevel": "1.9.2",
