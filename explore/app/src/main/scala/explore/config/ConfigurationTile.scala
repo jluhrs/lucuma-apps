@@ -94,6 +94,9 @@ final case class ConfigurationTile(
   val posAngle: UndoSetter[PosAngleConstraint] =
     pacAndMode.zoom(PosAngleConstraintAndObsMode.posAngleConstraint)
   val obsIsReadonly: Boolean                   =
+    readonly || obsIdSetEditInfo.hasExecuted
+  // staff can edit acquisition settings for ongoing spectroscopy observations
+  val acquisitionIsReadonly: Boolean           =
     readonly || (obsIdSetEditInfo.hasExecuted && !isStaffOrAdmin) || obsIdSetEditInfo.hasCompleted
   val selectorIsReadOnly: Boolean              =
     readonly || obsIdSetEditInfo.hasExecuted // even staff can't choose a new config if it is executed
@@ -391,6 +394,7 @@ object ConfigurationTile
                         props.modes.spectroscopy,
                         props.sequenceChanged,
                         props.obsIsReadonly,
+                        props.acquisitionIsReadonly,
                         props.units
                       ),
                   // Gmos South Long Slit
@@ -405,6 +409,7 @@ object ConfigurationTile
                         props.modes.spectroscopy,
                         props.sequenceChanged,
                         props.obsIsReadonly,
+                        props.acquisitionIsReadonly,
                         props.units
                       ),
                   // Gmos North Imaging
@@ -444,6 +449,7 @@ object ConfigurationTile
                       props.modes.spectroscopy,
                       props.sequenceChanged,
                       props.obsIsReadonly,
+                      props.acquisitionIsReadonly,
                       props.units,
                       props.isStaffOrAdmin
                     )

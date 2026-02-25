@@ -42,16 +42,17 @@ import lucuma.ui.syntax.all.given
 import lucuma.ui.utils.*
 
 final case class Flamingos2LongslitConfigPanel(
-  programId:       Program.Id,
-  obsId:           Observation.Id,
-  calibrationRole: Option[CalibrationRole],
-  observingMode:   Aligner[ObservingMode.Flamingos2LongSlit, Flamingos2LongSlitInput],
-  revertConfig:    Callback,
-  confMatrix:      SpectroscopyModesMatrix,
-  sequenceChanged: Callback,
-  readonly:        Boolean,
-  units:           WavelengthUnits,
-  isStaff:         Boolean
+  programId:           Program.Id,
+  obsId:               Observation.Id,
+  calibrationRole:     Option[CalibrationRole],
+  observingMode:       Aligner[ObservingMode.Flamingos2LongSlit, Flamingos2LongSlitInput],
+  revertConfig:        Callback,
+  confMatrix:          SpectroscopyModesMatrix,
+  sequenceChanged:     Callback,
+  readonly:            Boolean,
+  acquisitionReadonly: Boolean,
+  units:               WavelengthUnits,
+  isStaff:             Boolean
 ) extends ReactFnProps(Flamingos2LongslitConfigPanel)
 
 object Flamingos2LongslitConfigPanel
@@ -278,7 +279,7 @@ object Flamingos2LongslitConfigPanel
                     none,
                     acquisitionExposureTimeView,
                     ScienceMode.Imaging,
-                    props.readonly,
+                    props.acquisitionReadonly,
                     props.units,
                     props.calibrationRole,
                     "f2Acq".refined,

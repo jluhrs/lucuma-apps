@@ -62,6 +62,7 @@ object GmosLongslitConfigPanel {
     def confMatrix: SpectroscopyModesMatrix
     def sequenceChanged: Callback
     def readonly: Boolean
+    def acquisitionReadonly: Boolean
     def units: WavelengthUnits
     def instrument = observingMode.get.instrument
   }
@@ -202,9 +203,12 @@ object GmosLongslitConfigPanel {
         yield
           import ctx.given
 
+          val allowOnlyAcquisition     = !props.acquisitionReadonly && props.readonly
           val disableAdvancedEdit      = editState.get =!= ConfigEditState.AdvancedEdit || props.readonly
           val disableSimpleEdit        =
             disableAdvancedEdit && editState.get =!= ConfigEditState.SimpleEdit
+          val allowAdvancedAcqEdit     =
+            (editState.get === ConfigEditState.AdvancedEdit && !props.readonly) || allowOnlyAcquisition
           val showCustomization        = props.calibrationRole.isEmpty
           val allowRevertCustomization = !props.readonly
 
@@ -404,9 +408,9 @@ object GmosLongslitConfigPanel {
                       defaultValue = defaultAcquisitionRoi.some,
                       label = "ROI".some,
                       helpId = None,
-                      disabled = disableAdvancedEdit,
+                      disabled = !allowAdvancedAcqEdit,
                       showCustomization = showCustomization,
-                      allowRevertCustomization = allowRevertCustomization
+                      allowRevertCustomization = allowRevertCustomization || allowOnlyAcquisition
                     ),
                     CustomizableEnumSelectOptional(
                       id = "acq-explicit-filter".refined,
@@ -416,9 +420,9 @@ object GmosLongslitConfigPanel {
                       exclude = excludedAcquisitionFilters,
                       label = "Filter".some,
                       helpId = None,
-                      disabled = disableAdvancedEdit,
+                      disabled = !allowAdvancedAcqEdit,
                       showCustomization = showCustomization,
-                      allowRevertCustomization = allowRevertCustomization
+                      allowRevertCustomization = allowRevertCustomization || allowOnlyAcquisition
                     )
                   ),
                   <.div(
@@ -428,7 +432,7 @@ object GmosLongslitConfigPanel {
                       none,
                       acquisitionExposureTimeModeView(props.observingMode),
                       ScienceMode.Imaging,
-                      props.readonly,
+                      props.acquisitionReadonly,
                       props.units,
                       props.calibrationRole,
                       "gmosAcq".refined,
@@ -451,15 +455,16 @@ object GmosLongslitConfigPanel {
 
   // Gmos North Long Slit
   case class GmosNorthLongSlit(
-    programId:       Program.Id,
-    obsId:           Observation.Id,
-    calibrationRole: Option[CalibrationRole],
-    observingMode:   Aligner[ObservingMode.GmosNorthLongSlit, GmosNorthLongSlitInput],
-    revertConfig:    Callback,
-    confMatrix:      SpectroscopyModesMatrix,
-    sequenceChanged: Callback,
-    readonly:        Boolean,
-    units:           WavelengthUnits
+    programId:           Program.Id,
+    obsId:               Observation.Id,
+    calibrationRole:     Option[CalibrationRole],
+    observingMode:       Aligner[ObservingMode.GmosNorthLongSlit, GmosNorthLongSlitInput],
+    revertConfig:        Callback,
+    confMatrix:          SpectroscopyModesMatrix,
+    sequenceChanged:     Callback,
+    readonly:            Boolean,
+    acquisitionReadonly: Boolean,
+    units:               WavelengthUnits
   ) extends ReactFnProps[GmosLongslitConfigPanel.GmosNorthLongSlit](
         GmosLongslitConfigPanel.GmosNorthLongSlit.component
       )
@@ -712,16 +717,17 @@ object GmosLongslitConfigPanel {
 // Gmos South Long Slit
 
   case class GmosSouthLongSlit(
-    programId:       Program.Id,
-    obsId:           Observation.Id,
-    calibrationRole: Option[CalibrationRole],
-    observingMode:   Aligner[ObservingMode.GmosSouthLongSlit, GmosSouthLongSlitInput],
+    programId:           Program.Id,
+    obsId:               Observation.Id,
+    calibrationRole:     Option[CalibrationRole],
+    observingMode:       Aligner[ObservingMode.GmosSouthLongSlit, GmosSouthLongSlitInput],
     // spectroscopyRequirements: ScienceRequirements.Spectroscopy,
-    revertConfig:    Callback,
-    confMatrix:      SpectroscopyModesMatrix,
-    sequenceChanged: Callback,
-    readonly:        Boolean,
-    units:           WavelengthUnits
+    revertConfig:        Callback,
+    confMatrix:          SpectroscopyModesMatrix,
+    sequenceChanged:     Callback,
+    readonly:            Boolean,
+    acquisitionReadonly: Boolean,
+    units:               WavelengthUnits
   ) extends ReactFnProps[GmosLongslitConfigPanel.GmosSouthLongSlit](
         GmosLongslitConfigPanel.GmosSouthLongSlit.component
       )
