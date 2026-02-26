@@ -18,6 +18,7 @@ import navigate.epics.Channel
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
+import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.server.ApplyCommandResult
 import navigate.server.epicsdata.BinaryYesNo
@@ -38,6 +39,8 @@ trait ObserveCommand[F[_]] {
    * @return
    */
   def post(typ: CommandType, timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
+
+  def clearIfNotBusy: VerifiedEpics[F, F, Unit]
 }
 
 object ObserveCommand {
@@ -373,6 +376,18 @@ object ObserveCommand {
         }
         .map(_._2)
         .unNone
+
+    private val ClearDelay                                 = 50.milliseconds
+    override def clearIfNotBusy: VerifiedEpics[F, F, Unit] =
+      readChannel(telltaleChannel, car.oval).flatMap { g =>
+        VerifiedEpics.ifF(g.map(_ != CarState.BUSY))(
+          writeChannel(telltaleChannel, apply.dir)(
+            Applicative[F].pure(CadDirective.CLEAR)
+          ) *> VerifiedEpics.liftF(Temporal[F].sleep(ClearDelay))
+        )(
+          VerifiedEpics.unit
+        )
+      }
 
   }
 

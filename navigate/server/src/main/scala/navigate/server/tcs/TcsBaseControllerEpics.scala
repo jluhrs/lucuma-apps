@@ -504,6 +504,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsConfig): F[ApplyCommandResult] = for {
     _   <- sys.tcsEpics.clearErrors.verifiedRun(ConnectionTimeout)
+    _   <- resetAllTracking.verifiedRun(ConnectionTimeout)
     _   <- disableGuide
     p1f <- sys.ags.status.pwfs1Mechs.colFilter
              .verifiedRun(ConnectionTimeout)
@@ -527,6 +528,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     tcsConfig:   TcsConfig
   ): F[ApplyCommandResult] = for {
     _   <- sys.tcsEpics.clearErrors.verifiedRun(ConnectionTimeout)
+    _   <- resetAllTracking.verifiedRun(ConnectionTimeout)
     _   <- (stopAllWfs *> disableGuide).whenA(slewOptions.stopGuide.value)
     _   <- disableTargetFilter.whenA(slewOptions.shortcircuitTargetFilter.value)
     p1f <- sys.ags.status.pwfs1Mechs.colFilter
@@ -538,12 +540,11 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
              .attempt
              .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
     r   <- (
-             resetAllTracking *>
-               selectOiwfsT(tcsConfig)
-                 .andThen(
-                   _.wrapsCommand.azimuth(0).wrapsCommand.rotator(0).zeroRotatorGuide.mark
-                 )(sys.tcsEpics.startCommand(timeout))
-                 .post *>
+             selectOiwfsT(tcsConfig)
+               .andThen(
+                 _.wrapsCommand.azimuth(0).wrapsCommand.rotator(0).zeroRotatorGuide.mark
+               )(sys.tcsEpics.startCommand(timeout))
+               .post *>
                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
                applyTcsConfig(tcsConfig, p1f, p2f)
                  .andThen(c => c.targetFilter.shortcircuit(ShortcircuitTargetFilter(true)))

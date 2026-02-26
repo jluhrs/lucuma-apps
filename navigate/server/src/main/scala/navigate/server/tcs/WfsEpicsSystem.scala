@@ -105,6 +105,7 @@ object WfsEpicsSystem {
 
   trait WfsEpics[F[_]] {
     def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
+    def clear: VerifiedEpics[F, F, Unit]
     val gainsCmd: Command4Channels[F, Double, Double, Double, Double]
     val resetGainCmd: VerifiedEpics[F, F, Unit]
   }
@@ -120,6 +121,11 @@ object WfsEpicsSystem {
         CadDirective.START.pure[F]
       ) *>
         VerifiedEpics.liftF(Temporal[F].sleep(commandWaitTime).as(ApplyCommandResult.Completed))
+
+    override def clear: VerifiedEpics[F, F, Unit] =
+      VerifiedEpics.writeChannel(channels.telltale, channels.gainsDir)(
+        CadDirective.CLEAR.pure[F]
+      )
 
     override val gainsCmd: Command4Channels[F, Double, Double, Double, Double] =
       Command4Channels[F, Double, Double, Double, Double](
@@ -144,7 +150,7 @@ object WfsEpicsSystem {
       WfsGainCommandsImpl(wfsEpics, timeout, params :+ p)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
-      params.compile *> wfsEpics.post(timeout)
+      wfsEpics.clear *> params.compile *> wfsEpics.post(timeout)
 
     override val gains: GainsCommand[F, WfsGainCommands[F]] =
       new GainsCommand[F, WfsGainCommands[F]] {

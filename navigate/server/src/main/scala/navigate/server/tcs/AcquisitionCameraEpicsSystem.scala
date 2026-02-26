@@ -98,7 +98,7 @@ object AcquisitionCameraEpicsSystem {
       this.copy(params = params :+ v)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
-      params.compile *> applyCmd.post(timeout)
+      applyCmd.clearIfNotBusy *> params.compile *> applyCmd.post(timeout)
 
     override def setLens(lens: AcLens): AcquisitionCameraCommands[F] = addParam(
       writeCadParam(chs.telltale, chs.lens)(lens)

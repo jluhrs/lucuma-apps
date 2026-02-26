@@ -625,7 +625,7 @@ object TcsEpicsSystem {
       this.copy(params = params ++ c)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
-      params.compile *> tcsEpics.post(timeout)
+      tcsEpics.clear *> params.compile *> tcsEpics.post(timeout)
 
     override val mcsParkCommand: BaseCommand[F, TcsCommands[F]] =
       new BaseCommand[F, TcsCommands[F]] {
@@ -1467,7 +1467,7 @@ object TcsEpicsSystem {
       this.copy(params = params :+ p)
 
     override def post(typ: ObserveCommand.CommandType): VerifiedEpics[F, F, ApplyCommandResult] =
-      params.compile *> wfsCmd.post(typ, timeout)
+      wfsCmd.clearIfNotBusy *> params.compile *> wfsCmd.post(typ, timeout)
 
     override val observe: WfsObserveCommand[F, WfsCommands[F[_]]] =
       new WfsObserveCommand[F, WfsCommands[F]] {
