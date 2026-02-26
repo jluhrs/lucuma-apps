@@ -27,9 +27,13 @@ import scala.concurrent.duration.*
 object SequenceTileHelper:
 
   protected[sequence] case class LiveSequence(
-    data:       Pot[(Option[ExecutionVisits], Option[SequenceData])],
-    refreshing: Boolean
-  )
+    visits:   Reusable[Pot[Option[ExecutionVisits]]],
+    sequence: Reusable[Pot[View[Option[SequenceData]]]]
+  ):
+    val isReady: Boolean = visits.isReady && sequence.isReady
+
+  protected object LiveSequence:
+    given Reusability[LiveSequence] = Reusability.by(x => (x.visits, x.sequence))
 
   protected[sequence] def useLiveSequence(
     obsId:               Observation.Id,
@@ -42,9 +46,8 @@ object SequenceTileHelper:
       given StreamingClient[IO, ObservationDB] = ctx.clients.odb
       visits                                  <- useEffectKeepResultOnMount(ctx.odbApi.observationVisits(obsId))
       sequenceData                            <-
-        useEffectKeepResultOnMount(
+        useEffectKeepResultOnMount:
           ctx.odbApi.sequenceData(obsId, calibrationRole.forall(_.needsITC))
-        )
       refreshVisits                           <- useThrottledCallback(5.seconds)(visits.refresh.value.to[IO])
       refreshSequence                         <- useThrottledCallback(7.seconds)(sequenceData.refresh.to[IO])
       _                                       <-
@@ -76,7 +79,4 @@ object SequenceTileHelper:
           // has been assigned, OR a new version of the custom sed has been uploaded. This is to
           // catch the latter case.
           refreshSequence.value
-    yield LiveSequence(
-      (visits.value.value, sequenceData.value.value).tupled,
-      visits.isRunning || sequenceData.isRunning
-    )
+    yield LiveSequence(visits.value, sequenceData.state)

@@ -4,9 +4,9 @@
 package explore.model
 
 import cats.data.NonEmptyList
+import cats.derived.*
 import cats.kernel.Order
 import clue.data.syntax.*
-import cats.derived.*
 import lucuma.core.enums.Flamingos2Disperser
 import lucuma.core.enums.Flamingos2Filter
 import lucuma.core.enums.Flamingos2Fpu

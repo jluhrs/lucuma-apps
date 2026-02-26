@@ -43,6 +43,12 @@
   .p-datatable-tbody > tr:last-of-type > td {
     border-bottom: 1px var(--surface-border) solid;
   }
+
+  .lucuma-sequence-input input {
+    width: 100%;
+    border: inherit;
+    text-align: center;
+  }
 }
 
 .lucuma-sequence-step-guided {
@@ -138,6 +144,29 @@ table tr {
           margin-left: 0.5dvw;
         }
       }
+    }
+  }
+}
+
+.lucuma-sequence-drag-handle-cell {
+  cursor: grab;
+
+  // TODO Change to grabbing while dragging
+}
+
+.lucuma-sequence-edit-controls-cell {
+  width: 100%;
+  display: inline-block;
+  text-align: left;
+
+  button {
+    background-color: transparent;
+    border: 0;
+    margin: 0;
+    padding-right: 0 !important;
+
+    &.lucuma-sequence-delete-button {
+      color: var(--negative-icon-color);
     }
   }
 }

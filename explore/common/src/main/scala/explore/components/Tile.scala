@@ -124,6 +124,13 @@ trait TileComponent[P <: Tile[P]](
               .when_(tileState.sizeState.isMaximized)
           )
 
+        val blankButton = Button(
+          text = true,
+          clazz = ExploreStyles.TileStateButton,
+          icon = Icons.Maximize(^.visibility.hidden),
+          disabled = true
+        )
+
         // Tile wrapper
         if (!props.hidden) {
           <.div(
@@ -141,7 +148,8 @@ trait TileComponent[P <: Tile[P]](
               // Size control buttons
               <.div(ExploreStyles.TileControlButtons)(
                 minimizeButton.when(tileState.showMinimize).unless(tileState.fullSize),
-                maximizeButton.when(tileState.showMaximize).unless(tileState.fullSize)
+                maximizeButton.when(tileState.showMaximize).unless(tileState.fullSize),
+                blankButton.when(!tileState.showMinimize && !tileState.showMaximize)
               )
             ),
             // Tile body

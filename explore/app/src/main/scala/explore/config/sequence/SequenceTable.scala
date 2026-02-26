@@ -3,7 +3,9 @@
 
 package explore.config.sequence
 
+import cats.Endo
 import cats.syntax.all.*
+import japgolly.scalajs.react.callback.Callback
 import lucuma.core.enums.SequenceType
 import lucuma.core.math.SignalToNoise
 import lucuma.core.model.sequence.*
@@ -14,23 +16,22 @@ import lucuma.ui.sequence.*
 
 private trait SequenceTable[S, D]:
   def visits: List[Visit[D]]
-  def config: ExecutionConfig[S, D]
+  // def config: ExecutionConfig[S, D]
+  def staticConfig: S
+  def acquisition: Option[Atom[D]]
+  def science: Option[List[Atom[D]]]
   def signalToNoise: SequenceType => D => Option[SignalToNoise]
+  def isEditing: IsEditing
+  def modAcquisition: Endo[Atom[D]] => Callback
+  def modScience: Endo[List[Atom[D]]] => Callback
 
   private def futureSteps(
     seqType:        SequenceType,
     currentSeqType: Option[SequenceType]
-  )(sequence: ExecutionSequence[D]): List[SequenceRow.FutureStep[D]] =
+  )(sequence: List[Atom[D]]): List[SequenceRow.FutureStep[D]] =
     val allSteps: List[SequenceRow.FutureStep[D]] =
       SequenceRow.FutureStep
-        .fromAtoms(
-          sequence.nextAtom +: (
-            seqType match // For acquisition, we ignore possibleFuture
-              case SequenceType.Science => sequence.possibleFuture
-              case _                    => List.empty
-          ),
-          signalToNoise(seqType)
-        )
+        .fromAtoms(sequence, signalToNoise(seqType), seqType)
     if (currentSeqType.contains_(seqType)) allSteps.tail
     else allSteps
   end futureSteps
@@ -60,7 +61,7 @@ private trait SequenceTable[S, D]:
     currentVisitData.exists(_._3)
 
   protected[sequence] lazy val scienceRows: List[SequenceRow[D]] =
-    config.science
+    science
       .map(futureSteps(SequenceType.Science, currentSequenceType.filter(_ => isExecuting)))
       .orEmpty
 
@@ -69,7 +70,8 @@ private trait SequenceTable[S, D]:
     !currentSequenceType.contains_(SequenceType.Science) && scienceRows.nonEmpty
 
   protected[sequence] lazy val acquisitionRows: List[SequenceRow[D]] =
-    config.acquisition // If we are executing Science, don't show any future acquisition rows.
+    acquisition // If we are executing Science, don't show any future acquisition rows.
       .filter(_ => isAcquisitionDisplayed)
+      .map(List(_))
       .map(futureSteps(SequenceType.Acquisition, currentSequenceType.filter(_ => isExecuting)))
       .orEmpty

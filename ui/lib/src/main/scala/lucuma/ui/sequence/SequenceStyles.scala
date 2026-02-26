@@ -25,7 +25,14 @@ object SequenceStyles:
   val VisitStepExtraDatasetItem     = Css("lucuma-sequence-visit-extra-row-dataset-item")
   val VisitStepExtraDatasetQAStatus = Css("lucuma-sequence-visit-extra-row-dataset-qa-status")
 
+  val SequenceInput = Css("lucuma-sequence-input")
+
   val CurrentHeader = Css("lucuma-sequence-current-header")
+
+  val DragHandleCell: Css   = Css("lucuma-sequence-drag-handle-cell")
+  val EditControlsCell: Css = Css("lucuma-sequence-edit-controls-cell")
+  val CloneButton: Css      = Css("lucuma-sequence-clone-button")
+  val DeleteButton: Css     = Css("lucuma-sequence-delete-button")
 
   object StepType:
     val Bias: Css   = Css("lucuma-sequence-step-type-bias")

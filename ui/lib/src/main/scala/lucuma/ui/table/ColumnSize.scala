@@ -29,7 +29,7 @@ object ColumnSize:
     def withColumnSize(size: ColumnSize): ColumnDef.Single[T, V, TM, CM, TF, CF, FM] =
       col
         .withSize(size.initial)
-        .withEnableResizing(size.enableResize)
+        .withEnableResizing(size.enableResize && !col.enableResizing.contains(false))
         .setMinSize(size.minSize)
         .setMaxSize(size.maxSize)
 
@@ -37,6 +37,6 @@ object ColumnSize:
     def withColumnSize(size: ColumnSize): ColumnDef.Group[T, TM, CM, TF, CF, FM] =
       col
         .withSize(size.initial)
-        .withEnableResizing(size.enableResize)
+        .withEnableResizing(size.enableResize && !col.enableResizing.contains(false))
         .setMinSize(size.minSize)
         .setMaxSize(size.maxSize)

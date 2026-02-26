@@ -15,18 +15,32 @@ object SequenceIcons:
   val faCircle: FAIcon = js.native
 
   @js.native
-  @JSImport("@fortawesome/pro-solid-svg-icons", "faSquare")
-  val faSquare: FAIcon = js.native
+  @JSImport("@fortawesome/pro-light-svg-icons", "faClone")
+  val faClone: FAIcon = js.native
 
   @js.native
   @JSImport("@fortawesome/pro-solid-svg-icons", "faCrosshairs")
   val faCrosshairs: FAIcon = js.native
 
+  @js.native
+  @JSImport("@fortawesome/pro-solid-svg-icons", "faGripDotsVertical")
+  val faGripDotsVertical: FAIcon = js.native
+
+  @js.native
+  @JSImport("@fortawesome/pro-solid-svg-icons", "faSquare")
+  val faSquare: FAIcon = js.native
+
+  @js.native
+  @JSImport("@fortawesome/pro-light-svg-icons", "faTrashCan")
+  val faTrash: FAIcon = js.native
+
   // This is tedious but lets us do proper tree-shaking
   FontAwesome.library.add(
     faCircle,
+    faClone,
+    faCrosshairs,
     faSquare,
-    faCrosshairs
+    faTrash
   )
 
   // TODO Color
@@ -36,9 +50,12 @@ object SequenceIcons:
       TextLayer(letter.toString).withInverse().withSize(IconSize.SM)
     )
 
-  val Circle     = FontAwesomeIcon(faCircle)
-  val Crosshairs = FontAwesomeIcon(faCrosshairs)
-  val Square     = FontAwesomeIcon(faSquare)
+  val Circle           = FontAwesomeIcon(faCircle)
+  val Clone            = FontAwesomeIcon(faClone)
+  val Crosshairs       = FontAwesomeIcon(faCrosshairs)
+  val GripDotsVertical = FontAwesomeIcon(faGripDotsVertical)
+  val Square           = FontAwesomeIcon(faSquare)
+  val Trash            = FontAwesomeIcon(faTrash)
 
   object StepType:
     val Bias   = letterLayeredIcon(Square, 'B', SequenceStyles.StepType.Bias)

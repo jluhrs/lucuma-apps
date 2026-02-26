@@ -79,14 +79,14 @@ extension [D](row: SequenceRow[D])
 
   def isFirstInAtom: Boolean =
     row match
-      case currentStep @ CurrentAtomStepRow(_, _, _, _)    => currentStep.isFirstOfAtom
-      case futureStep @ SequenceRow.FutureStep(_, _, _, _) => futureStep.firstOf.isDefined
-      case _                                               => false
+      case currentStep @ CurrentAtomStepRow(_, _, _, _)       => currentStep.isFirstOfAtom
+      case futureStep @ SequenceRow.FutureStep(_, _, _, _, _) => futureStep.firstOf.isDefined
+      case _                                                  => false
 
   def stepState: StepState =
     row match
       case CurrentAtomStepRow(step, _, _, _)                => step.status
-      case SequenceRow.FutureStep(_, _, _, _)               => StepState.Pending
+      case SequenceRow.FutureStep(_, _, _, _, _)            => StepState.Pending
       case SequenceRow.Executed.ExecutedStep(stepRecord, _) =>
         stepRecord.executionState match
           case StepExecutionState.NotStarted => StepState.Pending

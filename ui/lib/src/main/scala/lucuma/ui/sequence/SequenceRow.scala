@@ -7,6 +7,7 @@ import cats.Eq
 import cats.derived.*
 import cats.syntax.all.*
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.SequenceType
 import lucuma.core.enums.StepGuideState
 import lucuma.core.math.Offset
 import lucuma.core.math.SignalToNoise
@@ -21,6 +22,10 @@ import lucuma.core.util.TimestampInterval
 import lucuma.react.table.RowId
 import lucuma.schemas.model.StepRecord
 import lucuma.schemas.model.Visit
+import monocle.Focus
+import monocle.Lens
+import monocle.Prism
+import monocle.macros.GenPrism
 
 /**
  * A row of a sequence table. It can be one of:
@@ -122,7 +127,8 @@ object SequenceRow:
     step:          Step[D],
     atomId:        Atom.Id,
     firstOf:       Option[Int],
-    signalToNoise: Option[SignalToNoise]
+    signalToNoise: Option[SignalToNoise],
+    seqType:       SequenceType
   ) extends SequenceRow[D]:
     val id               = step.id.asRight
     val instrumentConfig = step.instrumentConfig.some
@@ -136,33 +142,37 @@ object SequenceRow:
   object FutureStep:
     def fromAtom[D](
       atom:          Atom[D],
-      signalToNoise: D => Option[SignalToNoise]
+      signalToNoise: D => Option[SignalToNoise],
+      seqType:       SequenceType
     ): List[FutureStep[D]] =
       FutureStep(
         atom.steps.head,
         atom.id,
         atom.steps.length.some.filter(_ > 1),
-        atom.steps.head.getSignalToNoise(signalToNoise)
-      ) +: atom.steps.tail.map(step =>
-        SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise))
-      )
+        atom.steps.head.getSignalToNoise(signalToNoise),
+        seqType
+      ) +: atom.steps.tail.map: step =>
+        SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise), seqType)
 
     def fromAtoms[D](
       atoms:         List[Atom[D]],
-      signalToNoise: D => Option[SignalToNoise]
+      signalToNoise: D => Option[SignalToNoise],
+      seqType:       SequenceType
     ): List[FutureStep[D]] =
       atoms.flatMap(atom =>
         FutureStep(
           atom.steps.head,
           atom.id,
           atom.steps.length.some.filter(_ > 1),
-          atom.steps.head.getSignalToNoise(signalToNoise)
-        ) +: atom.steps.tail.map(step =>
-          SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise))
-        )
+          atom.steps.head.getSignalToNoise(signalToNoise),
+          seqType
+        ) +: atom.steps.tail.map: step =>
+          SequenceRow.FutureStep(step, atom.id, none, step.getSignalToNoise(signalToNoise), seqType)
       )
 
     given [D: Eq]: Eq[FutureStep[D]] = Eq.derived
+
+    def step[D]: Lens[FutureStep[D], Step[D]] = Focus[FutureStep[D]](_.step)
 
   sealed abstract class Executed[+D] extends SequenceRow[D]:
     val isFinished   = true
@@ -205,3 +215,16 @@ object SequenceRow:
 
     object ExecutedStep:
       given [D]: Eq[ExecutedStep[D]] = Eq.derived
+
+  given [D: Eq]: Eq[SequenceRow[D]] = Eq.instance:
+    case (a: FutureStep[D], b: FutureStep[D])                         => a === b
+    case (a: Executed.ExecutedVisit[D], b: Executed.ExecutedVisit[D]) => a === b
+    case (a: Executed.ExecutedStep[D], b: Executed.ExecutedStep[D])   => a === b
+    case _                                                            => false
+
+  def futureStep[D]: Prism[SequenceRow[D], FutureStep[D]]                =
+    GenPrism[SequenceRow[D], FutureStep[D]]
+  def executedVisit[D]: Prism[SequenceRow[D], Executed.ExecutedVisit[D]] =
+    GenPrism[SequenceRow[D], Executed.ExecutedVisit[D]]
+  def executedStep[D]: Prism[SequenceRow[D], Executed.ExecutedStep[D]]   =
+    GenPrism[SequenceRow[D], Executed.ExecutedStep[D]]

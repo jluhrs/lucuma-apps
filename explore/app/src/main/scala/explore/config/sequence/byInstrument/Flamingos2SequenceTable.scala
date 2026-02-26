@@ -3,8 +3,10 @@
 
 package explore.config.sequence.byInstrument
 
+import cats.Endo
 import explore.config.sequence.SequenceTable
 import explore.config.sequence.SequenceTableBuilder
+import japgolly.scalajs.react.callback.Callback
 import lucuma.core.enums.Instrument
 import lucuma.core.model.sequence.*
 import lucuma.core.model.sequence.flamingos2.Flamingos2DynamicConfig
@@ -12,13 +14,19 @@ import lucuma.core.model.sequence.flamingos2.Flamingos2StaticConfig
 import lucuma.itc.SignalToNoiseAt
 import lucuma.react.common.ReactFnProps
 import lucuma.schemas.model.Visit
+import lucuma.ui.sequence.IsEditing
 import lucuma.ui.sequence.byInstrument.SpectroscopySequenceTable
 
 final case class Flamingos2SequenceTable(
-  visits:       List[Visit.Flamingos2],
-  config:       ExecutionConfig.Flamingos2,
-  acquisitonSN: Option[SignalToNoiseAt],
-  scienceSN:    Option[SignalToNoiseAt]
+  visits:         List[Visit.Flamingos2],
+  staticConfig:   Flamingos2StaticConfig,
+  acquisition:    Option[Atom[Flamingos2DynamicConfig]],
+  science:        Option[List[Atom[Flamingos2DynamicConfig]]],
+  acquisitonSN:   Option[SignalToNoiseAt],
+  scienceSN:      Option[SignalToNoiseAt],
+  isEditing:      IsEditing,
+  modAcquisition: Endo[Atom[Flamingos2DynamicConfig]] => Callback,
+  modScience:     Endo[List[Atom[Flamingos2DynamicConfig]]] => Callback
 ) extends ReactFnProps(Flamingos2SequenceTable.component)
     with SequenceTable[Flamingos2StaticConfig, Flamingos2DynamicConfig]
     with SpectroscopySequenceTable[Flamingos2DynamicConfig]

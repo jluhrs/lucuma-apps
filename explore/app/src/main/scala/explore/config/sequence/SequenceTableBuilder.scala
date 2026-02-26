@@ -3,6 +3,7 @@
 
 package explore.config.sequence
 
+import cats.Endo
 import cats.Eq
 import cats.syntax.all.*
 import explore.components.ui.ExploreStyles
@@ -11,6 +12,7 @@ import explore.model.reusability.given
 import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.Instrument
+import lucuma.core.model.sequence.Atom
 import lucuma.react.SizePx
 import lucuma.react.resizeDetector.hooks.*
 import lucuma.react.syntax.*
@@ -18,6 +20,7 @@ import lucuma.react.table.*
 import lucuma.schemas.model.enums.StepExecutionState
 import lucuma.ui.reusability.given
 import lucuma.ui.sequence.*
+import lucuma.ui.sequence.SequenceColumns.*
 import lucuma.ui.syntax.all.given
 import lucuma.ui.table.*
 import lucuma.ui.table.ColumnSize.*
@@ -30,10 +33,18 @@ private type SequenceColumnsType[D] =
 private type ColumnType[D]          =
   ColumnDef[Expandable[HeaderOrRow[SequenceIndexedRow[D]]], ?, Nothing, Nothing, Nothing, Any, Any]
 
-private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends SequenceRowBuilder[D]:
+private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument)
+    extends SequenceRowBuilder[D]
+    with SequenceEditOptics[D]:
   private type Props = SequenceTable[S, D]
 
-  private lazy val ColDef = ColumnDef[SequenceTableRowType]
+  private case class TableMeta[D](
+    isEditing:      IsEditing = IsEditing.False,
+    modAcquisition: Endo[Atom[D]] => Callback,
+    modScience:     Endo[List[Atom[D]]] => Callback
+  ) extends SequenceTableMeta[D]
+
+  private lazy val ColDef = ColumnDef[SequenceTableRowType].WithTableMeta[TableMeta[D]]
 
   private val HeaderColumnId: ColumnId   = ColumnId("header")
   private val ExtraRowColumnId: ColumnId = ColumnId("extraRow")
@@ -78,17 +89,24 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
         rows       <-
           useMemo(
             (visitsData, props.acquisitionRows, props.scienceRows, props.currentVisitId)
-          ): (visitsData, acquisitionRows, scienceRows, currentVisitId) =>
+          ): (visitsData, acquisition, science, currentVisitId) =>
             val (visitRows, nextScienceIndex): (List[VisitData], StepIndex) = visitsData.value
             stitchSequence(
               visitRows,
               currentVisitId,
               nextScienceIndex,
-              acquisitionRows,
-              scienceRows
+              acquisition,
+              science
             )
         resize     <- useResizeDetector
         dynTable   <- useDynTable(DynTableDef, SizePx(resize.width.orEmpty))
+        _          <-
+          useEffectWithDeps(props.isEditing.value):
+            value => // We have to handle column visibility through dynTable, so that column widths are correctly recomputed
+              dynTable.modifyColumnSizing:
+                _.modify:
+                  _ + (DragHandleColumnId -> (if (value) 35.toPx else 0.toPx)) +
+                    (EditControlsColumnId -> (if (value) 70.toPx else 0.toPx))
         table      <-
           useReactTable:
             TableOptions(
@@ -107,8 +125,35 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
                 columnSizing = dynTable.columnSizing,
                 columnVisibility = dynTable.columnVisibility
               ),
-              onColumnSizingChange = dynTable.onColumnSizingChangeHandler
+              onColumnSizingChange = dynTable.onColumnSizingChangeHandler,
+              meta = TableMeta(props.isEditing, props.modAcquisition, props.modScience)
             )
+        tableDnd   <- useVirtualizedTableDragAndDrop(
+                        table,
+                        DragHandleColumnId,
+                        getData = _.original.value.toOption
+                          .flatMap:
+                            _.step match
+                              case SequenceRow.futureStep(fs) => (fs.stepId, fs.seqType).some
+                              case _                          => none,
+                        containerRef = resize.ref,
+                        onDrop = (sourceData, target) =>
+                          (table.options.meta,
+                           sourceData.map(_._1),
+                           sourceData.map(_._2),
+                           target.flatMap(_.data.map(_._1)),
+                           target.map(_.edge)
+                          )
+                            .mapN: (meta, sourceStepId, seqType, targetStepId, edge) =>
+                              meta.seqTypeMod(seqType):
+                                moveStep(sourceStepId, targetStepId, edge)
+                            .orEmpty,
+                        canDrop = (targetData, sourceArgs) =>
+                          targetData.exists: // Only allow dragging into same sequence type
+                            case (targetStepId, targetSeqType) =>
+                              sourceArgs.source.data.value.exists: (sourceStepId, sourceSeqType) =>
+                                sourceSeqType === targetSeqType && sourceStepId != targetStepId
+                      )
       yield
         val extraRowMod: TagMod =
           TagMod(
@@ -119,57 +164,68 @@ private trait SequenceTableBuilder[S, D: Eq](instrument: Instrument) extends Seq
               .whenDefined
           )
 
-        PrimeAutoHeightVirtualizedTable(
-          table,
-          estimateSize = index =>
-            table.getRowModel().rows.get(index).map(_.original.value) match
-              case Some(Right(SequenceIndexedRow(SequenceRow.Executed.ExecutedStep(_, _), _))) =>
-                SequenceRowHeight.WithExtra
-              case _                                                                           =>
-                SequenceRowHeight.Regular,
-          overscan = 8,
-          containerRef = resize.ref,
-          compact = Compact.Very,
-          hoverableRows = true,
-          celled = true,
-          tableMod = SequenceStyles.SequenceTable,
-          headerCellMod = _.column.id match
-            case id if id == HeaderColumnId   => SequenceStyles.HiddenColTableHeader
-            case id if id == ExtraRowColumnId => SequenceStyles.HiddenColTableHeader
-            case _                            => TagMod.empty,
-          rowMod = rowTagMod:
-            _.original.value.fold(
-              _ => ExploreStyles.SequenceRowHeader,
-              stepRow =>
-                val step: SequenceRow[D] = stepRow.step
-                TagMod(
-                  step match
-                    case SequenceRow.Executed.ExecutedStep(step, _)                    =>
-                      SequenceStyles.RowHasExtra |+|
-                        ExploreStyles.SequenceRowDone.unless_(
-                          step.executionState == StepExecutionState.Ongoing
-                        )
-                    case SequenceRow.FutureStep(_, _, firstOf, _) if firstOf.isDefined =>
-                      ExploreStyles.SequenceRowFirstInAtom
-                    case _                                                             => TagMod.empty,
-                  if (LinkingInfo.developmentMode)
-                    step.id.toOption.map(^.title := _.toString).whenDefined
-                  else TagMod.empty
-                )
+        tableDnd
+          .context:
+            PrimeAutoHeightVirtualizedTable(
+              table,
+              estimateSize = index =>
+                table.getRowModel().rows.get(index).map(_.original.value) match
+                  case Some(
+                        Right(SequenceIndexedRow(SequenceRow.Executed.ExecutedStep(_, _), _))
+                      ) =>
+                    SequenceRowHeight.WithExtra
+                  case _ =>
+                    SequenceRowHeight.Regular,
+              overscan = 8,
+              containerRef = tableDnd.containerRef,
+              compact = Compact.Very,
+              hoverableRows = true,
+              celled = true,
+              tableMod = SequenceStyles.SequenceTable,
+              headerCellMod = _.column.id match
+                case id if id == HeaderColumnId       => SequenceStyles.HiddenColTableHeader
+                case id if id == ExtraRowColumnId     => SequenceStyles.HiddenColTableHeader
+                case id if id == DragHandleColumnId   =>
+                  SequenceStyles.HiddenColTableHeader.unless(props.isEditing.value)
+                case id if id == EditControlsColumnId =>
+                  SequenceStyles.HiddenColTableHeader.unless(props.isEditing.value)
+                case _                                => TagMod.empty,
+              rowMod = tableDnd.rowMod: (row, _) =>
+                row.original.value.fold(
+                  _ => ExploreStyles.SequenceRowHeader,
+                  stepRow =>
+                    val step: SequenceRow[D] = stepRow.step
+                    TagMod(
+                      step match
+                        case SequenceRow.Executed.ExecutedStep(step, _)                       =>
+                          SequenceStyles.RowHasExtra |+|
+                            ExploreStyles.SequenceRowDone.unless_(
+                              step.executionState == StepExecutionState.Ongoing
+                            )
+                        case SequenceRow.FutureStep(_, _, firstOf, _, _) if firstOf.isDefined =>
+                          ExploreStyles.SequenceRowFirstInAtom
+                        case _                                                                => TagMod.empty,
+                      if (LinkingInfo.developmentMode)
+                        step.id.toOption.map(^.title := _.toString).whenDefined
+                      else TagMod.empty
+                    )
+                ),
+              cellMod = tableDnd.cellMod: (cell, _) =>
+                cell.row.original.value match
+                  case Left(_)        => // Header
+                    cell.column.id match
+                      case id if id == HeaderColumnId => TagMod(^.colSpan := columns.length)
+                      case _                          => ^.display.none
+                  case Right(stepRow) =>
+                    cell.column.id match
+                      case id if id == DragHandleColumnId   =>
+                        TagMod(^.paddingRight := "0")
+                      case id if id == EditControlsColumnId =>
+                        TagMod(^.paddingLeft := "0")
+                      case id if id == ExtraRowColumnId     =>
+                        stepRow.step match // Extra row is shown in a selected row or in an executed step row.
+                          case SequenceRow.Executed.ExecutedStep(_, _) => extraRowMod
+                          case _                                       => TagMod.empty
+                      case _                                =>
+                        TagMod.empty
             )
-          ,
-          cellMod = cellTagMod: cell =>
-            cell.row.original.value match
-              case Left(_)        => // Header
-                cell.column.id match
-                  case id if id == HeaderColumnId => TagMod(^.colSpan := columns.length)
-                  case _                          => ^.display.none
-              case Right(stepRow) =>
-                cell.column.id match
-                  case id if id == ExtraRowColumnId =>
-                    stepRow.step match // Extra row is shown in a selected row or in an executed step row.
-                      case SequenceRow.Executed.ExecutedStep(_, _) => extraRowMod
-                      case _                                       => TagMod.empty
-                  case _                            =>
-                    TagMod.empty
-        )
