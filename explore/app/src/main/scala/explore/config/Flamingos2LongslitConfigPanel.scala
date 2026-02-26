@@ -42,17 +42,16 @@ import lucuma.ui.syntax.all.given
 import lucuma.ui.utils.*
 
 final case class Flamingos2LongslitConfigPanel(
-  programId:           Program.Id,
-  obsId:               Observation.Id,
-  calibrationRole:     Option[CalibrationRole],
-  observingMode:       Aligner[ObservingMode.Flamingos2LongSlit, Flamingos2LongSlitInput],
-  revertConfig:        Callback,
-  confMatrix:          SpectroscopyModesMatrix,
-  sequenceChanged:     Callback,
-  readonly:            Boolean,
-  acquisitionReadonly: Boolean,
-  units:               WavelengthUnits,
-  isStaff:             Boolean
+  programId:       Program.Id,
+  obsId:           Observation.Id,
+  calibrationRole: Option[CalibrationRole],
+  observingMode:   Aligner[ObservingMode.Flamingos2LongSlit, Flamingos2LongSlitInput],
+  revertConfig:    Callback,
+  confMatrix:      SpectroscopyModesMatrix,
+  sequenceChanged: Callback,
+  permissions:     ConfigEditPermissions,
+  units:           WavelengthUnits,
+  isStaff:         Boolean
 ) extends ReactFnProps(Flamingos2LongslitConfigPanel)
 
 object Flamingos2LongslitConfigPanel
@@ -68,11 +67,12 @@ object Flamingos2LongslitConfigPanel
       yield
         import ctx.given
 
-        val disableAdvancedEdit      = editState.get =!= ConfigEditState.AdvancedEdit || props.readonly
+        val disableAdvancedEdit      =
+          editState.get =!= ConfigEditState.AdvancedEdit || !props.permissions.isFullEdit
         val disableSimpleEdit        =
           disableAdvancedEdit && editState.get =!= ConfigEditState.SimpleEdit
         val showCustomization        = props.calibrationRole.isEmpty
-        val allowRevertCustomization = !props.readonly
+        val allowRevertCustomization = props.permissions.isFullEdit
 
         val disperserView: View[Flamingos2Disperser] = props.observingMode
           .zoom(
@@ -229,7 +229,7 @@ object Flamingos2LongslitConfigPanel
                 none,
                 exposureTimeMode,
                 ScienceMode.Spectroscopy,
-                props.readonly,
+                !props.permissions.isFullEdit,
                 props.units,
                 props.calibrationRole,
                 "f2LongSlit".refined
@@ -279,7 +279,7 @@ object Flamingos2LongslitConfigPanel
                     none,
                     acquisitionExposureTimeView,
                     ScienceMode.Imaging,
-                    props.acquisitionReadonly,
+                    props.permissions.isReadonly,
                     props.units,
                     props.calibrationRole,
                     "f2Acq".refined,
@@ -295,7 +295,7 @@ object Flamingos2LongslitConfigPanel
               revertCustomizations =
                 props.observingMode.view(_.toInput).mod(_.revertCustomizations),
               sequenceChanged = props.sequenceChanged,
-              readonly = props.readonly,
+              !props.permissions.isFullEdit,
               showAdvancedButton = props.isStaff
             )
           )
