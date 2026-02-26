@@ -30,6 +30,7 @@ import japgolly.scalajs.react.*
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.*
 import lucuma.core.enums.CalibrationRole
+import lucuma.core.enums.ExecutionEnvironment
 import lucuma.core.model.Target
 import lucuma.core.model.sequence.Atom
 import lucuma.core.model.sequence.ExecutionConfig
@@ -237,7 +238,10 @@ object SequenceTile
                       tooltip = "Enter sequence editing mode",
                       tooltipOptions = TooltipOptions.Top
                     ).mini.compact
-                      .when(!props.isEditing.get && sizeState.isMaximized && liveSequence.isReady),
+                      .when(!props.isEditing.get && sizeState.isMaximized && liveSequence.isReady)
+                      .when( // TODO Remove once actually supported
+                        ctx.environment === ExecutionEnvironment.Development
+                      ),
                     React
                       .Fragment(
                         Button(
