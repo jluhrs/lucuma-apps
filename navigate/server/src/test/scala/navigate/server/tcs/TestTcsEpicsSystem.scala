@@ -78,6 +78,8 @@ object TestTcsEpicsSystem {
         .put((typ === ObserveCommand.CommandType.PermanentOn).fold(BinaryYesNo.Yes, BinaryYesNo.No))
         .as(ApplyCommandResult.Completed)
     }
+
+    override def clearIfNotBusy: VerifiedEpics[F, F, Unit] = VerifiedEpics.unit
   }
 
   case class EnclosureChannelsState(
