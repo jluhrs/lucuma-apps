@@ -79,7 +79,7 @@ final case class ConfigurationTile(
   observingModeGroups:      ObservingModeGroupList,
   sequenceChanged:          Callback,
   readonly:                 Boolean,
-  obsIdSetEditInfo:         ObsIdSetEditInfo,          // for the Position Angle Editor
+  obsIdSetEditInfo:         ObsIdSetEditInfo,          // for determining edit permissions
   units:                    WavelengthUnits,
   isStaffOrAdmin:           Boolean,
   targetView:               View[Option[ItcTarget]]
@@ -88,15 +88,18 @@ final case class ConfigurationTile(
       "Configuration",
       bodyClass = ExploreStyles.ConfigurationTileBody
     )(ConfigurationTile):
-  val observingMode: Option[ObservingMode]     = pacAndMode.get._2
-  val mode: UndoSetter[Option[ObservingMode]]  =
+  val observingMode: Option[ObservingMode]                             = pacAndMode.get._2
+  val mode: UndoSetter[Option[ObservingMode]]                          =
     pacAndMode.zoom(PosAngleConstraintAndObsMode.observingMode)
-  val posAngle: UndoSetter[PosAngleConstraint] =
+  val posAngle: UndoSetter[PosAngleConstraint]                         =
     pacAndMode.zoom(PosAngleConstraintAndObsMode.posAngleConstraint)
-  val obsIsReadonly: Boolean                   =
-    readonly || (obsIdSetEditInfo.hasExecuted && !isStaffOrAdmin) || obsIdSetEditInfo.hasCompleted
-  val selectorIsReadOnly: Boolean              =
-    readonly || obsIdSetEditInfo.hasExecuted // even staff can't choose a new config if it is executed
+  // staff can edit some things for ongoing observations
+  val permissions: ConfigEditPermissions                               =
+    if readonly || obsIdSetEditInfo.hasCompleted || (obsIdSetEditInfo.hasExecuted && !isStaffOrAdmin)
+    then ConfigEditPermissions.Readonly
+    else if obsIdSetEditInfo.hasExecuted
+    then ConfigEditPermissions.OnlyForOngoing
+    else ConfigEditPermissions.FullEdit
   val itcTargets: EitherNec[ItcTargetProblem, NonEmptyList[ItcTarget]] =
     scienceTargetIds.toItcTargets(allTargets)
 
@@ -233,7 +236,7 @@ object ConfigurationTile
                   _.map: om =>
                     new SelectItem[ObservingModeSummary](value = om, label = om.shortName)
                 .flattenOption
-            ).unless(props.selectorIsReadOnly)
+            ).when(props.permissions.isFullEdit)
           )
 
         val posAngleConstraintAligner: Aligner[PosAngleConstraint, Input[PosAngleConstraintInput]] =
@@ -343,9 +346,7 @@ object ConfigurationTile
                     props.obsConf.selectedPA,
                     props.obsConf.averagePA,
                     agsState,
-                    props.readonly, // readonly status is more complicated here...
-                    props.obsIdSetEditInfo,
-                    props.isStaffOrAdmin
+                    props.permissions
                   )
                 ),
               if (props.mode.get.isEmpty)
@@ -372,7 +373,7 @@ object ConfigurationTile
                         .orEmpty,
                       props.modes,
                       props.customSedTimestamps,
-                      props.obsIsReadonly,
+                      !props.permissions.isFullEdit,
                       props.units,
                       props.targetView
                     )
@@ -390,7 +391,7 @@ object ConfigurationTile
                         revertConfig,
                         props.modes.spectroscopy,
                         props.sequenceChanged,
-                        props.obsIsReadonly,
+                        props.permissions,
                         props.units
                       ),
                   // Gmos South Long Slit
@@ -404,7 +405,7 @@ object ConfigurationTile
                         revertConfig,
                         props.modes.spectroscopy,
                         props.sequenceChanged,
-                        props.obsIsReadonly,
+                        props.permissions,
                         props.units
                       ),
                   // Gmos North Imaging
@@ -417,7 +418,7 @@ object ConfigurationTile
                       reqsExposureTimeMode,
                       revertConfig,
                       props.sequenceChanged,
-                      props.obsIsReadonly,
+                      !props.permissions.isFullEdit,
                       props.units
                     ),
                   // Gmos South Imaging
@@ -430,7 +431,7 @@ object ConfigurationTile
                       reqsExposureTimeMode,
                       revertConfig,
                       props.sequenceChanged,
-                      props.obsIsReadonly,
+                      !props.permissions.isFullEdit,
                       props.units
                     ),
                   // Flamingos2 Long Slit
@@ -443,7 +444,7 @@ object ConfigurationTile
                       revertConfig,
                       props.modes.spectroscopy,
                       props.sequenceChanged,
-                      props.obsIsReadonly,
+                      props.permissions,
                       props.units,
                       props.isStaffOrAdmin
                     )

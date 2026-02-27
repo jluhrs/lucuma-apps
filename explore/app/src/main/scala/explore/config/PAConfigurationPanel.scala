@@ -9,7 +9,6 @@ import explore.Icons
 import explore.components.HelpIcon
 import explore.components.ui.ExploreStyles
 import explore.model.AveragePABasis
-import explore.model.ObsIdSetEditInfo
 import explore.model.Observation
 import explore.model.enums.AgsState
 import explore.model.enums.PosAngleOptions
@@ -36,15 +35,13 @@ import lucuma.ui.syntax.all.given
 import monocle.Lens
 
 case class PAConfigurationPanel(
-  programId:        Program.Id,
-  obsId:            Observation.Id,
-  posAngleView:     View[PosAngleConstraint],
-  selectedPA:       Option[Angle],
-  averagePA:        Option[AveragePABasis],
-  agsState:         View[AgsState],
-  readonly:         Boolean,
-  obsIdSetEditInfo: ObsIdSetEditInfo,
-  isStaff:          Boolean
+  programId:    Program.Id,
+  obsId:        Observation.Id,
+  posAngleView: View[PosAngleConstraint],
+  selectedPA:   Option[Angle],
+  averagePA:    Option[AveragePABasis],
+  agsState:     View[AgsState],
+  permissions:  ConfigEditPermissions
 ) extends ReactFnProps(PAConfigurationPanel.component)
 
 object PAConfigurationPanel:
@@ -121,13 +118,12 @@ object PAConfigurationPanel:
       val isAllowedOption        = allowedExecutedOptions.contains(posAngleOptionsView.get)
 
       val finalReadOnly =
-        props.readonly || !props.agsState.get.canRecalculate ||
-          props.obsIdSetEditInfo.hasCompleted ||
-          (!props.isStaff && props.obsIdSetEditInfo.hasExecuted) ||
-          (props.obsIdSetEditInfo.hasExecuted && !isAllowedOption)
+        props.permissions.isReadonly ||
+          (props.permissions.isOnlyForOngoing && !isAllowedOption) ||
+          !props.agsState.get.canRecalculate
 
       val disabledOptions: Set[PosAngleOptions] =
-        if (props.isStaff && props.obsIdSetEditInfo.hasOngoingButNotCompleted && isAllowedOption)
+        if (props.permissions.isOnlyForOngoing && isAllowedOption)
           Enumerated[PosAngleOptions].all.toSet -- allowedExecutedOptions
         else Set.empty
 

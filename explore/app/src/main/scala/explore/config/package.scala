@@ -3,6 +3,8 @@
 
 package explore.config
 
+import cats.Eq
+import cats.derived.*
 import cats.syntax.all.*
 import eu.timepit.refined.types.numeric.PosInt
 import explore.model.ExploreModelValidators
@@ -111,3 +113,15 @@ def useModeData(
                confMatrix.getRowByInstrumentConfig(obsMode)
   yield row.map(_.map(ModeData.fromSpectroscopyModeRow(_)))
 }
+
+enum ConfigEditPermissions derives Eq:
+  case Readonly, OnlyForOngoing, FullEdit
+
+  def fold[A](ro: => A, ongoing: => A, full: => A): A = this match
+    case Readonly       => ro
+    case OnlyForOngoing => ongoing
+    case FullEdit       => full
+
+  def isReadonly: Boolean       = fold(true, false, false)
+  def isOnlyForOngoing: Boolean = fold(false, true, false)
+  def isFullEdit: Boolean       = fold(false, false, true)
