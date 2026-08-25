@@ -316,33 +316,35 @@ class PackageSuite extends munit.CatsEffectSuite {
     val dummy               = new AtomicInteger(0)
     val markVal             = 1
     val sId                 = stepId(1)
+    val action = fromF[IO](
+                      ActionType.Configure(Resource.TCS),
+                      IO {
+                        dummy.set(markVal)
+                        Result.OK(DummyResult)
+                      }
+                    )
+    val seq = initSeqState(
+              obsId = obsId,
+              loadedStep = EngineStep(
+                id = sId,
+                executions = List(
+                  NonEmptyList.one(
+                    action
+                  )
+                )
+              ),
+              SequenceType.Science,
+              breakpoints = Breakpoints.empty
+            )
     val s0: EngineState[IO] =
       TestUtil.initStateWithSequence(
         obsId,
-        initSeqState(
-          obsId = obsId,
-          loadedStep = EngineStep(
-            id = sId,
-            executions = List(
-              NonEmptyList.one(
-                fromF[IO](
-                  ActionType.Configure(Resource.TCS),
-                  IO {
-                    dummy.set(markVal)
-                    Result.OK(DummyResult)
-                  }
-                )
-              )
-            )
-          ),
-          SequenceType.Science,
-          breakpoints = Breakpoints.empty
-        )
+        seq
       )
 
     val c                      = ActionCoordsInSeq(sId, ExecutionIndex(0), ActionIndex(0))
     def event(eng: Engine[IO]) = Event.modifyState[IO](
-      eng.startSingle(ActionCoords(obsId, c)).as(SeqEvent.NullSeqEvent)
+      eng.startSingle(ActionCoords(obsId, c), seq, action).as(SeqEvent.NullSeqEvent)
     )
 
     val sfs =

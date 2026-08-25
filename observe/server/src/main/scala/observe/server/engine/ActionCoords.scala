@@ -8,6 +8,7 @@ import cats.derived.*
 import lucuma.core.model.sequence.Step
 import lucuma.core.util.NewType
 import observe.model.Observation
+import observe.model.Subsystem
 
 object ActionIndex extends NewType[Long]
 type ActionIndex = ActionIndex.Type
@@ -23,3 +24,6 @@ case class ActionCoordsInSeq(stepId: Step.Id, execIdx: ExecutionIndex, actIdx: A
  * Class to hold the coordinates of an Action inside the engine state
  */
 case class ActionCoords(obsId: Observation.Id, actCoords: ActionCoordsInSeq) derives Eq
+
+
+case class ConfigActionCoords(stepId: Step.Id, system: Subsystem)

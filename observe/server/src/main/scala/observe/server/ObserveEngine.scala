@@ -253,7 +253,7 @@ object ObserveEngine {
           .filter(_._2.started)
           .keys
           .toList
-          .mapFilter(s.resourceAtCoords)
+          .map(_.system)
       )
       .toSet
 

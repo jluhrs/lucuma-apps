@@ -26,7 +26,7 @@ final case class SequenceState[F[_]](
   loadedStep:          Option[LoadedStep[F]], // None = idle/done, Some = executing
   currentSequenceType: SequenceType,
   breakpoints:         Breakpoints,
-  singleRuns:          Map[ActionCoordsInSeq, ActionState]
+  singleRuns:          Map[ConfigActionCoords, ActionState]
 ):
   /**
    * Advances execution within the current step's execution groups. Returns `None` if the step is
@@ -77,33 +77,33 @@ final case class SequenceState[F[_]](
       case _                  => this
 
   // Functions to handle single run of Actions
-  def startSingle(c: ActionCoordsInSeq): SequenceState[F] =
+  def startSingle(c: ConfigActionCoords): SequenceState[F] =
     loadedStep match
       case Some(z) if z.done.nonEmpty => this // already past initial execution
       case _                          =>
         copy(singleRuns = singleRuns + (c -> ActionState.Started))
 
-  def failSingle(c: ActionCoordsInSeq, err: Result.Error): SequenceState[F] =
+  def failSingle(c: ConfigActionCoords, err: Result.Error): SequenceState[F] =
     if getSingleState(c).started
     then copy(singleRuns = singleRuns + (c -> ActionState.Failed(err)))
     else this
 
-  def completeSingle[V <: RetVal](c: ActionCoordsInSeq, r: V): SequenceState[F] =
+  def completeSingle[V <: RetVal](c: ConfigActionCoords, r: V): SequenceState[F] =
     if getSingleState(c).started
     then copy(singleRuns = singleRuns + (c -> ActionState.Completed(r)))
     else this
 
-  def getSingleState(c: ActionCoordsInSeq): ActionState =
+  def getSingleState(c: ConfigActionCoords): ActionState =
     singleRuns.getOrElse(c, ActionState.Idle)
 
-  def getSingleAction(c: ActionCoordsInSeq): Option[Action[F]] =
-    for
-      step <- loadedStep.filter(_.id === c.stepId)
-      exec <- step.executionZipper.toEngineStep.executions.get(c.execIdx.value)
-      act  <- exec.get(c.actIdx.value)
-    yield act
+//  def getSingleAction(c: ActionCoordsInSeq): Option[Action[F]] =
+//    for
+//      step <- loadedStep.filter(_.id === c.stepId)
+//      exec <- step.executionZipper.toEngineStep.executions.get(c.execIdx.value)
+//      act  <- exec.get(c.actIdx.value)
+//    yield act
 
-  val getSingleActionStates: Map[ActionCoordsInSeq, ActionState] = singleRuns
+  val getSingleActionStates: Map[ConfigActionCoords, ActionState] = singleRuns
 
   def clearSingles: SequenceState[F] = copy(singleRuns = Map.empty)
 
